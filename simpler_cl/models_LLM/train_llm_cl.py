@@ -7,10 +7,10 @@ from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping, Learning
 # from pytorch_lightning import loggers as pl_loggers
 from torch.utils.data import DataLoader, Dataset
 from transformers import AutoModelForCausalLM, AutoTokenizer, AdamW, get_linear_schedule_with_warmup
-from MWPs_dm import MathWordProblemDataModule
+from mwps_dm import MathWordProblemDataModule
 from utils import compute_prefix_result, save_json
 from contrastive_losses import Subspace, TLWD_score_multiview
-from SupConLoss import SupConLoss
+from sup_con_loss import SupConLoss
 
 
 class MWPsModule(LightningModule):
