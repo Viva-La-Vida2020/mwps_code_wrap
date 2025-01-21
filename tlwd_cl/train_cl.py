@@ -1,3 +1,5 @@
+import argparse
+
 import torch
 import random
 
@@ -15,7 +17,6 @@ from utils.logger import *
 
 '''English: https://huggingface.co/bert-base-uncased, 
     Chinese: https://huggingface.co/yechen/bert-base-chinese'''
-
 
 
 class MyEncoder(json.JSONEncoder):
@@ -276,7 +277,7 @@ def train(data_root_path, train_file, save_path, gpu, epochs, current_epoch=0):
         log.write("epoch:" + str(e) + "\tloss:" + str(loss_total) + "\n")
         logger.info(f"epoch: {e} - loss: {loss_total}")
 
-        if e >= 0:
+        if (e >= 60 and e % 5 == 0) or e >= 110:
             solver.eval()
             value_ac = 0
             equation_ac = 0
@@ -369,15 +370,31 @@ def train(data_root_path, train_file, save_path, gpu, epochs, current_epoch=0):
 
 
 
+def get_parser():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--run_name', default='Train_Math23k', type=str)
+    parser.add_argument('--device', default=0, type=int)  # WARNING: DO NOT USE DEVICES=[4, 5]!!!
+    parser.add_argument('--batch_size', default=16, type=int)
+    parser.add_argument('--seed', default=1, type=int)
+    parser.add_argument('--tokenizer', default='bert-wwm', type=str, choices=['bert', 'bert-wwm', 'roberta-wwm'])
+    parser.add_argument('--lr', default=5e-5, type=float)
+    parser.add_argument('--alpha', default=0.1, type=float)
+    parser.add_argument('--temperature', default=0.05, type=float)
+    parser.add_argument('--epoch', default=120, type=int)
+    parser.add_argument('--train_file', default='train_cl_tlwd_alpha0_25_seed42.jsonl', type=str)
+
+    return parser
+
+
 if __name__ == '__main__':
-    gpu_id = 0
-    max_text_len = 256
-    max_equ_len = 45
-    batch_size = 16
-    lr = 5e-5
-    embedding_size = 128
-    temperature = 0.05
-    alpha = 0.1
+    # gpu_id = 0
+    # max_text_len = 256
+    # max_equ_len = 45
+    # batch_size = 16
+    # lr = 5e-5
+    # embedding_size = 128
+    # temperature = 0.05
+    # alpha = 0.1
 
     'AsDiv-A 5CV'
     # pretrain_model_path = 'bert-base-uncased'
@@ -401,7 +418,6 @@ if __name__ == '__main__':
     # acc_avg = sum(folds_scores) / len(folds_scores)
     # print('Overall accuracy: ', acc_avg)
 
-
     'MathQA'
     # pretrain_model_path = 'bert-base-uncased'
     # run_name = f'Train_MathQA'
@@ -419,16 +435,25 @@ if __name__ == '__main__':
     #     os.makedirs(checkpoints_path)
     # train(data_root_path, train_file, checkpoints_path, gpu=gpu_id, epochs=120, current_epoch=0)
 
+    max_text_len = 256
+    max_equ_len = 45
+    embedding_size = 128
+
+    parser = get_parser()
+    args = parser.parse_args()
+    batch_size = args.batch_size
+    lr = args.batch_size.lr
+    temperature = args.temperature
+    alpha = args.alpha
+
     'Math23k'
     pretrain_model_path = '../pretrained_model/bert-base-chinese'
-    run_name = f'Train_Math23k'
-    train_file = 'train_cl_tlwd_alpha0_25_seed42.jsonl'
+    gpu_id = args.device
+    run_name = args.run_name
+    train_file = args.train_file
     data_name = 'math23k'
     data_root_path = f'../data/Math23k/'
-    discription = 'Math23k w/CL bert-encoder, epoch120'
-    cl = 'Y'
-    train_set = 'math23k'
-    candidate_pool = 'train'
+    # train_set = 'math23k'
     folds_scores = []
 
     checkpoints_path = f'./checkpoints/{run_name}/'
@@ -438,3 +463,6 @@ if __name__ == '__main__':
     if not os.path.exists(checkpoints_path):
         os.makedirs(checkpoints_path)
     train(data_root_path, train_file, checkpoints_path, gpu=gpu_id, epochs=120, current_epoch=0)
+
+
+
