@@ -212,7 +212,7 @@ def preprocess_treedis_ted(data_path, save_path):
 
     expr = set()
     for d in train_data:
-        expr.add(' '.join(d['postfix_normed']))
+        expr.add(' '.join(d['postfix']))
 
     expr = list(expr)
     res = dict()
@@ -224,7 +224,7 @@ def preprocess_treedis_ted(data_path, save_path):
 
             res[expr[i] + ' ; ' + expr[j]] = tree_dis
             res[expr[j] + ' ; ' + expr[i]] = tree_dis
-        if i % 10 == 0:
+        if i % 100 == 0:
             print(i/len(expr))
 
     f = open(save_path, 'w', encoding='utf-8')

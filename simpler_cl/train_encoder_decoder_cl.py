@@ -55,20 +55,42 @@ def train_simpler_cl(args):
         if args.tokenizer == 'bert':
             pretrain_model_path = "yechen/bert-base-chinese"
         elif args.tokenizer == 'bert-wwm':
-            # pretrain_model_path = "hfl/chinese-bert-wwm-ext"
-            pretrain_model_path = "../pretrained_model/chinese-bert-wwm-ext"
+            pretrain_model_path = "hfl/chinese-bert-wwm-ext"
+            # pretrain_model_path = "../pretrained_model/chinese-bert-wwm-ext"
         elif args.tokenizer == 'roberta-wwm':
             pretrain_model_path = "hfl/chinese-roberta-wwm-ext"
 
         config = AutoConfig.from_pretrained(pretrain_model_path)
         tokenizer = BertTokenizer.from_pretrained(pretrain_model_path)
         epochs = args.epoch
-        data_root_path = '../data/Math23k/'
-        train_data = load_data(data_root_path + 'Math23K_train.jsonl')
+        data_root_path = '../data/math23k/'
+        train_data = load_data(data_root_path + 'train.jsonl')
         # dev_data = load_data(data_root_path + 'Math23K_dev.jsonl')
         # test_data = load_data(data_root_path + 'Math23K_test.jsonl')
-        dev_data = load_data(data_root_path + 'Math23K_test.jsonl')
-        test_data = load_data(data_root_path + 'Math23K_dev.jsonl')
+        dev_data = load_data(data_root_path + 'test.jsonl')
+        test_data = load_data(data_root_path + 'test.jsonl')
+    elif args.dataset in ['MathQA']:
+        if args.tokenizer == 'bert':
+            pretrain_model_path = "bert-base-uncased"
+
+        config = AutoConfig.from_pretrained(pretrain_model_path)
+        tokenizer = BertTokenizer.from_pretrained(pretrain_model_path)
+        epochs = args.epoch
+        data_root_path = '../data/mathqa/'
+        train_data = load_data(data_root_path + 'train_cl.jsonl')
+        dev_data = load_data(data_root_path + 'test.jsonl')
+        test_data = load_data(data_root_path + 'test.jsonl')
+    elif args.dataset in ['SVAMP']:
+        if args.tokenizer == 'bert':
+            pretrain_model_path = "bert-base-uncased"
+
+        config = AutoConfig.from_pretrained(pretrain_model_path)
+        tokenizer = BertTokenizer.from_pretrained(pretrain_model_path)
+        epochs = args.epoch
+        data_root_path = '../data/asdiv-a_mawps_svamp/'
+        train_data = load_data(data_root_path + 'train.jsonl')
+        dev_data = load_data(data_root_path + 'test.jsonl')
+        test_data = load_data(data_root_path + 'test.jsonl')
 
     tokens = Counter()
     max_nums_len = 0
@@ -112,7 +134,7 @@ def train_simpler_cl(args):
             if s in number_tokens_ids:
                 num.append(i)
         assert len(num) == len(d['nums']), "Number count not match！%s vs %s" % (len(num), len(d['nums']))
-        value = [eval(x) for x in d['nums']]
+        value = [eval(str(x)) for x in d['nums']]
 
         train_batches1.append(
             (src, num, value, tgt1, tgt2, d['postfix'], d['prefix'], d['root_nodes'], d['longest_view']))
@@ -139,7 +161,7 @@ def train_simpler_cl(args):
             pair = train_batches[i: i + batch_size]
             pairs.append(pair)
             i += batch_size
-        pairs.append(train_batches[i:])
+        # pairs.append(train_batches[i:])
         batches1 = []
 
         for pair in pairs:
@@ -211,7 +233,8 @@ def train_simpler_cl(args):
         print("epoch:", e)
         solver.train()
         loss_total = 0.0
-
+        loss_ce_total = 0.0
+        loss_c1_total = 0.0
         random.shuffle(train_batches)
         batches1 = data_generator(train_batches, args.batch_size)
 
@@ -231,13 +254,17 @@ def train_simpler_cl(args):
             loss = loss1 + loss_c1
 
             loss_total += loss.item()
+            loss_ce_total += loss1.item()
+            loss_c1_total += loss_c1.item()
             loss.backward()
             optimizer.step()
             scheduler.step()
             optimizer.zero_grad()
 
         loss_total /= len(batches1)
-        logger.info(f"epoch: {e} - loss: {loss_total}- loss CE: {loss1}  - loss cl: {loss_c1}")
+        loss_ce_total /= len(batches1)
+        loss_c1_total /= len(batches1)
+        logger.info(f"epoch: {e} - loss: {loss_total}- loss CE: {loss_ce_total}  - loss cl: {loss_c1_total}")
         if e >= 60:
             solver.eval()
 
@@ -386,7 +413,7 @@ def get_parser():
     parser.add_argument('--tokenizer', default='bert-wwm', type=str, choices=['bert', 'bert-wwm', 'roberta-wwm'])
     parser.add_argument('--lr', default=5e-5, type=float)
     parser.add_argument('--epoch', default=120, type=int)
-    parser.add_argument('--dataset', default='Math23k', type=str, choices=['Math23k', 'AsDiv-A'])
+    parser.add_argument('--dataset', default='Math23k', type=str, choices=['Math23k', 'AsDiv-A', 'SVAMP', 'MathQA'])
     parser.add_argument('--CL', default='SimplerCL', type=str, choices=['SimplerCL', 'SimCLR', 'NoCL'])
     parser.add_argument('--similarity', default='TLWD', type=str, choices=['TLWD', 'TED'])
     parser.add_argument('--H', action='store_true', default=True, help='CL from Holistic View')
@@ -395,7 +422,7 @@ def get_parser():
     parser.add_argument('--train', action='store_true', default=True)
     parser.add_argument('--test', action='store_true')
     # parser.add_argument('--vis', action='store_true', help='Save embeddings for TSNE-Visulization')
-    parser.add_argument('--ckpt', default='./experiments/Math23k_GTS/models_best', type=str)#experiments/Math23k_GTS_TLWD/models_bestn#./ckpts/models_best
+    # parser.add_argument('--ckpt', default='./experiments/Math23k_GTS/models_best', type=str)#experiments/Math23k_GTS_TLWD/models_bestn#./ckpts/models_best
     return parser
 
 

@@ -137,7 +137,7 @@ def train(data_root_path, train_file, save_path, gpu, epochs, current_epoch=0):
             pair = train_batches[i: i + batch_size]
             pairs.append(pair)
             i += batch_size
-        pairs.append(train_batches[i:])
+        # pairs.append(train_batches[i:])
         batches1 = []
         batches2 = []
         batches3 = []
@@ -272,6 +272,8 @@ def train(data_root_path, train_file, save_path, gpu, epochs, current_epoch=0):
             optimizer.step()
             scheduler.step()
             optimizer.zero_grad()
+            if (i + 1) % 100 == 0:
+                torch.cuda.empty_cache()
 
         loss_total /= len(batches1)
         log.write("epoch:" + str(e) + "\tloss:" + str(loss_total) + "\n")
@@ -363,6 +365,8 @@ def train(data_root_path, train_file, save_path, gpu, epochs, current_epoch=0):
             logger.info(
                 f"epoch: {e} - equ_acc: {float(equation_ac) / eval_total} - val_acc: {float(value_ac) / eval_total}")
         torch.cuda.empty_cache()
+        torch.cuda.ipc_collect()
+
     solver.save_pretrained(save_path + '/models_last')
     tokenizer.save_pretrained(save_path + '/models_last')
 
@@ -376,12 +380,12 @@ def get_parser():
     parser.add_argument('--device', default=0, type=int)  # WARNING: DO NOT USE DEVICES=[4, 5]!!!
     parser.add_argument('--batch_size', default=16, type=int)
     parser.add_argument('--seed', default=1, type=int)
-    parser.add_argument('--tokenizer', default='bert-wwm', type=str, choices=['bert', 'bert-wwm', 'roberta-wwm'])
+    # parser.add_argument('--tokenizer', default='bert-wwm', type=str, choices=['bert', 'bert-wwm', 'roberta-wwm'])
     parser.add_argument('--lr', default=5e-5, type=float)
     parser.add_argument('--alpha', default=0.1, type=float)
     parser.add_argument('--temperature', default=0.05, type=float)
     parser.add_argument('--epoch', default=120, type=int)
-    parser.add_argument('--train_file', default='train_cl_tlwd_alpha0_25_seed42.jsonl', type=str)
+    parser.add_argument('--train_file', default='train.jsonl', type=str)
 
     return parser
 
@@ -442,18 +446,36 @@ if __name__ == '__main__':
     parser = get_parser()
     args = parser.parse_args()
     batch_size = args.batch_size
-    lr = args.batch_size.lr
+    lr = args.lr
     temperature = args.temperature
     alpha = args.alpha
 
     'Math23k'
-    pretrain_model_path = '../pretrained_model/bert-base-chinese'
+    # pretrain_model_path = 'yechen/bert-base-chinese'
+    # pretrain_model_path = 'bert-base-uncased'
+    # gpu_id = args.device
+    # run_name = args.run_name
+    # train_file = args.train_file
+    # data_name = 'svamp'
+    # data_root_path = f'../data/asdiv-a_mawps_svamp/'
+    # # train_set = 'math23k'
+    # folds_scores = []
+    #
+    # checkpoints_path = f'./checkpoints/{run_name}/'
+    # results_path = f'./results/{data_name}.jsonl'
+    #
+    # print(run_name)
+    # if not os.path.exists(checkpoints_path):
+    #     os.makedirs(checkpoints_path)
+    # train(data_root_path, train_file, checkpoints_path, gpu=gpu_id, epochs=120, current_epoch=0)
+
+    'MathQA'
+    pretrain_model_path = 'bert-base-uncased'
     gpu_id = args.device
     run_name = args.run_name
     train_file = args.train_file
-    data_name = 'math23k'
-    data_root_path = f'../data/Math23k/'
-    # train_set = 'math23k'
+    data_name = 'svamp'
+    data_root_path = f'../data/mathqa/'
     folds_scores = []
 
     checkpoints_path = f'./checkpoints/{run_name}/'
@@ -462,7 +484,4 @@ if __name__ == '__main__':
     print(run_name)
     if not os.path.exists(checkpoints_path):
         os.makedirs(checkpoints_path)
-    train(data_root_path, train_file, checkpoints_path, gpu=gpu_id, epochs=120, current_epoch=0)
-
-
-
+    train(data_root_path, train_file, checkpoints_path, gpu=gpu_id, epochs=args.epoch, current_epoch=0)

@@ -342,7 +342,11 @@ def preprocess_cl_RecursiveTreeDis(data_root_path, train_file, treedis_file, see
     f.close()
 
 
-def preprocess_cl_TED(data_root_path, train_file, treedis_file, save_file):
+def preprocess_cl_TED(data_root_path, train_file, treedis_file, seed, save_file):
+    seed = seed
+    random.seed(seed)
+    np.random.seed(seed)
+    print(f"seed is {seed}")
     print(data_root_path + 'is processing...')
     train_data = load_data(data_root_path + train_file)
     '''(TED)'''
@@ -383,7 +387,7 @@ def preprocess_cl_TED(data_root_path, train_file, treedis_file, save_file):
     #     treedis_matrix1[:, idx] = -float('inf')
     #     treedis_matrix1[idx, :] = -float('inf')
     for idx in filter_ids:
-        '''有点奇怪，所有length<10的expression和其他expression之间的的distaance记为无穷小'''
+        '''有点奇怪，所有length<10的expression和其他expression之间的的distance记为无穷小'''
         treedis_matrix2[:, idx] = -float('inf')
         treedis_matrix2[idx, :] = -float('inf')
 
@@ -408,7 +412,12 @@ def preprocess_cl_TED(data_root_path, train_file, treedis_file, save_file):
                 positive = idx
         '选出和当前expression具有最高TED的expr，值得注意的是由于treedis_matrix2[i][i]==无穷小，所以选出来的实际上是次高值'
         # list[] => max index => 多个最大值则返回第一个
-        postfix_negative = expr_expr_reverse_dict[np.argmax(treedis_matrix2[exprpos])]
+        # postfix_negative = expr_expr_reverse_dict[np.argmax(treedis_matrix2[exprpos])]
+
+        max_indices = np.where(treedis_matrix2[exprpos] == np.max(treedis_matrix2[exprpos]))[0]
+        random_index = np.random.choice(max_indices)
+        postfix_negative = expr_expr_reverse_dict[random_index]
+
         negative_ids = expr_id_dict[postfix_negative]
         maxscore = -float('inf')
         negative = d['id']

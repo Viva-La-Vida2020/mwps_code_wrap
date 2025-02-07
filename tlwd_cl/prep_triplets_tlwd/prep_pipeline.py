@@ -1,3 +1,4 @@
+import argparse
 from prep_tree_dis import *
 from prep_cl import *
 # from ..utils.utils import *
@@ -60,78 +61,33 @@ def find_by_id(data, id):
     return ans
 
 
+def get_parser():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--seed', default=42, type=int)
+    parser.add_argument('--similarity', default='TLWD', type=str)
+
+    return parser
+
 
 if __name__ == '__main__':
-    file_root_path = f"../../data/math23k/"
-    '将NxCx转换为N，进行交换律正则'
-    # file_path = f"{file_root_path}train.jsonl"
-    # save_path = f"{file_root_path}train_VU.jsonl"
-    # prefix_postfix_norm_NoOn(file_path, save_path)
+    parser = get_parser()
+    args = parser.parse_args()
+
+    file_root_path = f"/home/wanglu/mwps_code_wrap/data/mathqa/"
     'TreeDis with different alpha'
     # preprocess_treedis_tlwd(file_root_path + 'train_cl.jsonl', file_root_path + 'tree_dis_tlwd_alpha0_25.jsonl',
     #                    alpha=0.25)
     # preprocess_treedis_ted(file_root_path + 'train_cl.jsonl', file_root_path + 'tree_dis_ted.jsonl',)
     '先做一个train_cl，然后固定positive'
-    preprocess_cl_RecursiveTreeDis(file_root_path,
-                                   'train_cl.jsonl',
-                                   'tree_dis_ted.jsonl',
-                                   41,
-                                   'train_cl_ted_seed41.jsonl')
-    preprocess_cl_RecursiveTreeDis(file_root_path,
-                                   'train_cl.jsonl',
-                                   'tree_dis_ted.jsonl',
-                                   42,
-                                   'train_cl_ted_seed42.jsonl')
-    preprocess_cl_RecursiveTreeDis(file_root_path,
-                                   'train_cl.jsonl',
-                                   'tree_dis_ted.jsonl',
-                                   1,
-                                   'train_cl_ted_seed1.jsonl')
-    #
-    # preprocess_treedis(file_root_path + 'train_16191_normed.jsonl', file_root_path + 'tree_dis_New_Normed_Alpha1_5.jsonl',
-    #                    alpha=1.5)
-    # '先做一个train_cl，然后固定positive'
-    # preprocess_cl_RecursiveTreeDis(file_root_path,
-    #                                'train_cl_NewTreeDis_PosSample10Text_NegRandom10Exp_NoFilter_Alpha0_25.jsonl',
-    #                                'tree_dis_New_Normed_Alpha1_5.jsonl',
-    #                                'train_cl_NewTreeDis_PosSample10Text_NegRandom10Exp_NoFilter_Alpha1_5.jsonl')
-    'check'
-    # data1 = load_data(
-    #     file_root_path + 'train_cl_NewTreeDis_PosSample10Text_NegRandom10Exp_NoFilter_Alpha0_25.jsonl')
-    # data2 = load_data(
-    #     file_root_path + 'train_cl_NewTreeDis_PosSample10Text_NegRandom10Exp_NoFilter_Alpha1.jsonl')
-    # data3 = load_data(
-    #     file_root_path + 'train_cl_NewTreeDis_PosSample10Text_NegRandom10Exp_NoFilter_Alpha1_5.jsonl')
-    # for i in range(100):
-    #     negative1 = find_by_id(data1, data1[i]['negative'])
-    #     negative2 = find_by_id(data2, data2[i]['negative'])
-    #     negative3 = find_by_id(data3, data3[i]['negative'])
-    #     print(data1[i]['prefix_normed'], negative1['prefix_normed'], negative2['prefix_normed'],
-    #           negative3['prefix_normed'])
-
-
-    # for i in range(5):
-    #     file_root_path = f"../data/cv_asdiv-a_RecursiveTreeDis/fold{i}/"
-    #     '将NxCx转换为N，进行交换律正则'
-    #     file_path = f"../data/cv_asdiv-a_RecursiveTreeDis/fold{i}/train.jsonl"
-    #     save_path = f"../data/cv_asdiv-a_RecursiveTreeDis/fold{i}/train_normed.jsonl"
-    #     prefix_postfix_norm(file_path, save_path)
-    #     'TreeDis with different alpha'
-    #     preprocess_treedis(file_root_path + 'train_normed.jsonl', file_root_path + 'tree_dis_New_Normed_Alpha1_5.jsonl', alpha=1.5)
-    #     '先做一个train_cl，然后固定positive'
-    #     preprocess_cl_RecursiveTreeDis(file_root_path,
-    #                                    'train_cl_NewTreeDis_PosSample10Text_NegRandom10Exp_NoFilter_Alpha1.jsonl',
-    #                                    'tree_dis_New_Normed_Alpha1_5.jsonl',
-    #                                    'train_cl_NewTreeDis_PosSample10Text_NegRandom10Exp_NoFilter_Alpha1_5.jsonl')
-    #     'check'
-    #     data1 = load_data(
-    #         file_root_path + 'train_cl_NewTreeDis_PosSample10Text_NegRandom10Exp_NoFilter_Alpha0_25.jsonl')
-    #     data2 = load_data(
-    #         file_root_path + 'train_cl_NewTreeDis_PosSample10Text_NegRandom10Exp_NoFilter_Alpha1.jsonl')
-    #     data3 = load_data(
-    #         file_root_path + 'train_cl_NewTreeDis_PosSample10Text_NegRandom10Exp_NoFilter_Alpha1_5.jsonl')
-    #     for i in range(100):
-    #         negative1 = find_by_id(data1, data1[i]['negative'])
-    #         negative2 = find_by_id(data2, data2[i]['negative'])
-    #         negative3 = find_by_id(data3, data3[i]['negative'])
-    #         print(data1[i]['prefix_normed'], negative1['prefix_normed'], negative2['prefix_normed'], negative3['prefix_normed'])
+    if args.similarity == 'TLWD':
+        preprocess_cl_RecursiveTreeDis(file_root_path,
+                                   'train.jsonl',
+                                   'tree_dis_tlwd_alpha0_25.jsonl',
+                                   args.seed,
+                                   f'train_cl_tlwd_alpha0_25_seed{args.seed}.jsonl')
+    elif args.similarity == 'TED':
+        preprocess_cl_TED(file_root_path,
+                          'train.jsonl',
+                          'tree_dis_ted.jsonl',
+                          args.seed,
+                          f'train_cl_ted_seed{args.seed}.jsonl')
