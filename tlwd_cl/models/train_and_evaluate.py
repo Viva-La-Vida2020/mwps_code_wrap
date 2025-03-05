@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 from .tree import TreeNode, TreeEmbedding, TreeBeam, copy_list
 
+
 class Solver(nn.Module):
     def __init__(self, encoder, decoder1):
         super().__init__()
@@ -12,6 +13,7 @@ class Solver(nn.Module):
     def save_pretrained(self, save_directory):
         self.encoder.save_pretrained(save_directory)
         torch.save(self.decoder1.state_dict(), save_directory + "/decoder1.pt")
+
 
 def masked_cross_entropy(logits, target, mask):
     target[~mask] = 0
@@ -33,7 +35,7 @@ class Similarity(nn.Module):
         return self.cos(x, y)
 
 
-def  cl_loss(s1, s2, s3, margin=0.2):
+def cl_loss(s1, s2, s3, margin=0.2):
     's1,s2,s3: 16*768'
     sim = Similarity()
     's1_s2_cos: 16'
@@ -44,7 +46,7 @@ def  cl_loss(s1, s2, s3, margin=0.2):
     return loss
 
 
-def train_tree(solver, encoded, text_ids, text_pads, num_ids, num_pads, equ_ids, equ_pads, op_tokens, constant_tokens):
+def train_tree(solver, encoded, text_pads, num_pads, equ_ids, equ_pads, op_tokens, constant_tokens):
     encoder_outputs = encoded['text'].transpose(0, 1)
     problem_output = encoder_outputs[0]
     all_nums_encoder_outputs = encoded['num']
@@ -55,19 +57,23 @@ def train_tree(solver, encoded, text_ids, text_pads, num_ids, num_pads, equ_ids,
     num_start = len(op_tokens)
     embeddings_stacks = [[] for _ in range(batch_size)]
     left_childs = [None for _ in range(batch_size)]
-    padding_hidden = torch.zeros(1, solver.decoder1.predict.hidden_size, dtype=encoder_outputs.dtype, device=encoder_outputs.device)
-    constant_pads = torch.ones(batch_size, len(constant_tokens), dtype=encoder_outputs.dtype, device=encoder_outputs.device)
+    padding_hidden = torch.zeros(1, solver.decoder1.predict.hidden_size, dtype=encoder_outputs.dtype,
+                                 device=encoder_outputs.device)
+    constant_pads = torch.ones(batch_size, len(constant_tokens), dtype=encoder_outputs.dtype,
+                               device=encoder_outputs.device)
     operand_pads = torch.cat((constant_pads, num_pads), dim=1)
     for t in range(max_target_length):
         num_score, op, current_embeddings, current_context, current_nums_embeddings = solver.decoder1.predict(
-            node_stacks, left_childs, encoder_outputs, all_nums_encoder_outputs, padding_hidden, 1-text_pads, 1-operand_pads)
+            node_stacks, left_childs, encoder_outputs, all_nums_encoder_outputs, padding_hidden, 1 - text_pads,
+                                                                                                 1 - operand_pads)
 
         outputs = torch.cat((op, num_score), 1)
         all_node_outputs.append(outputs)
 
         generate_input = equ_ids[:, t].clone()
         generate_input[generate_input >= len(op_tokens)] = 0
-        left_child, right_child, node_label = solver.decoder1.generate(current_embeddings, generate_input, current_context)
+        left_child, right_child, node_label = solver.decoder1.generate(current_embeddings, generate_input,
+                                                                       current_context)
         left_childs = []
         for idx, l, r, node_stack, i, o in zip(range(batch_size), left_child.split(1), right_child.split(1),
                                                node_stacks, equ_ids[:, t].contiguous().tolist(), embeddings_stacks):
@@ -101,7 +107,9 @@ def train_tree(solver, encoded, text_ids, text_pads, num_ids, num_pads, equ_ids,
     loss = masked_cross_entropy(all_node_outputs, target, equ_pads.bool())
     return loss  # , loss_0.item(), loss_1.item()
 
-def evaluate_tree(solver, encoded, text_ids, text_pads, num_ids, num_pads, op_tokens, constant_tokens, max_length, beam_size=3):
+
+def evaluate_tree(solver, encoded, text_ids, text_pads, num_ids, num_pads, op_tokens, constant_tokens, max_length,
+                  beam_size=3):
     encoder_outputs = encoded['text'].transpose(0, 1)
     problem_output = encoder_outputs[0]
     all_nums_encoder_outputs = encoded['num']
@@ -114,7 +122,8 @@ def evaluate_tree(solver, encoded, text_ids, text_pads, num_ids, num_pads, op_to
     left_childs = [None for _ in range(batch_size)]
 
     beams = [TreeBeam(0.0, node_stacks, embeddings_stacks, left_childs, [])]
-    padding_hidden = torch.zeros(1, solver.decoder1.predict.hidden_size, dtype=encoder_outputs.dtype, device=encoder_outputs.device)
+    padding_hidden = torch.zeros(1, solver.decoder1.predict.hidden_size, dtype=encoder_outputs.dtype,
+                                 device=encoder_outputs.device)
     constant_pads = torch.ones(batch_size, len(constant_tokens), dtype=num_pads.dtype, device=encoder_outputs.device)
     operand_pads = torch.cat((constant_pads, num_pads), dim=1)
 
@@ -129,7 +138,8 @@ def evaluate_tree(solver, encoded, text_ids, text_pads, num_ids, num_pads, op_to
             left_childs = b.left_childs
 
             num_score, op, current_embeddings, current_context, current_nums_embeddings = solver.decoder1.predict(
-                b.node_stack, left_childs, encoder_outputs, all_nums_encoder_outputs, padding_hidden, 1-text_pads, 1-operand_pads)
+                b.node_stack, left_childs, encoder_outputs, all_nums_encoder_outputs, padding_hidden, 1 - text_pads,
+                                                                                                      1 - operand_pads)
 
             out_score = torch.log_softmax(torch.cat((op, num_score), dim=1), dim=1)
 
@@ -149,7 +159,8 @@ def evaluate_tree(solver, encoded, text_ids, text_pads, num_ids, num_pads, op_to
                 if out_token < num_start:
                     generate_input = torch.LongTensor([out_token])
                     generate_input = generate_input.to(encoder_outputs.device)
-                    left_child, right_child, node_label = solver.decoder1.generate(current_embeddings, generate_input, current_context)
+                    left_child, right_child, node_label = solver.decoder1.generate(current_embeddings, generate_input,
+                                                                                   current_context)
 
                     current_node_stack[0].append(TreeNode(right_child))
                     current_node_stack[0].append(TreeNode(left_child, left_flag=True))
@@ -167,7 +178,7 @@ def evaluate_tree(solver, encoded, text_ids, text_pads, num_ids, num_pads, op_to
                     current_left_childs.append(current_embeddings_stacks[0][-1].embedding)
                 else:
                     current_left_childs.append(None)
-                current_beams.append(TreeBeam(b.score+float(tv), current_node_stack, current_embeddings_stacks,
+                current_beams.append(TreeBeam(b.score + float(tv), current_node_stack, current_embeddings_stacks,
                                               current_left_childs, current_out))
         beams = sorted(current_beams, key=lambda x: x.score, reverse=True)
         beams = beams[:beam_size]
@@ -180,13 +191,17 @@ def evaluate_tree(solver, encoded, text_ids, text_pads, num_ids, num_pads, op_to
 
     return beams[0]
 
+
 def train_double(solver, text_ids, text_pads, num_ids, num_pads, equ_ids, equ_pads, op_tokens, constant_tokens):
     encoded = solver.encoder(text_ids, text_pads, num_ids, num_pads)
-    loss1 = train_tree(solver, encoded, text_ids, text_pads, num_ids, num_pads, equ_ids, equ_pads, op_tokens, constant_tokens)
+    loss1 = train_tree(solver, encoded, text_pads, num_pads, equ_ids, equ_pads, op_tokens, constant_tokens)
     loss = loss1
     return loss, encoded
 
-def evaluate_double(solver, text_ids, text_pads, num_ids, num_pads, op_tokens, constant_tokens, max_length, beam_size=3):
+
+def evaluate_double(solver, text_ids, text_pads, num_ids, num_pads, op_tokens, constant_tokens, max_length,
+                    beam_size=3):
     encoded = solver.encoder(text_ids, text_pads, num_ids, num_pads)
-    tree_res = evaluate_tree(solver, encoded, text_ids, text_pads, num_ids, num_pads, op_tokens, constant_tokens, max_length, beam_size)
+    tree_res = evaluate_tree(solver, encoded, text_ids, text_pads, num_ids, num_pads, op_tokens, constant_tokens,
+                             max_length, beam_size)
     return tree_res

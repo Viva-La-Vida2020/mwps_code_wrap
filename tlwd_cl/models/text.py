@@ -16,12 +16,17 @@ def gather_vectors(encoded, num_ids):
 
     return gathered
 
+
 class Encoder(nn.Module):
     def __init__(self, model):
         super().__init__()
         self.model = model
     
     def forward(self, text_ids, text_pads, num_ids, num_pads):
+        for name, param in self.model.named_parameters():
+            print(name, param.requires_grad, param.sum().item())  # Ensure sum is nonzero
+            break
+
         outputs = self.model(input_ids=text_ids, attention_mask=text_pads)
         encoded = outputs[0]
         num = gather_vectors(encoded, num_ids)

@@ -139,8 +139,8 @@ def train(data_root_path, train_file, save_path, gpu, epochs, current_epoch=0):
             i += batch_size
         # pairs.append(train_batches[i:])
         batches1 = []
-        batches2 = []
-        batches3 = []
+        # batches2 = []
+        # batches3 = []
         for pair in pairs:
             text_ids, num_ids, graphs, equ_ids, tuple_ids = [], [], [], [], []
             max_text = max([len(x[0][0]) for x in pair])
@@ -168,58 +168,58 @@ def train(data_root_path, train_file, save_path, gpu, epochs, current_epoch=0):
             equ_pads = equ_pads.float()
             batches1.append((text_ids, text_pads, num_ids, num_pads, graphs, equ_ids, equ_pads, tuple_ids))
 
-            text_ids, num_ids, graphs, equ_ids, tuple_ids = [], [], [], [], []
-            max_text = max([len(x[1][0]) for x in pair])
-            max_num = max([len(x[1][1]) for x in pair])
-            max_equ = max([len(x[1][3]) for x in pair])
-            max_tuple = max([len(x[1][4]) for x in pair])
-            for _, p in enumerate(pair):
-                text, num, value, equ, tuple = p[1]
-                text_ids.append(text + [tokenizer.pad_token_id] * (max_text - len(text)))
-                num_ids.append(num + [-1] * (max_num - len(num)))
-                graphs.append(generate_graph(max_num, value))
-                equ_ids.append(equ + [-1] * (max_equ - len(equ)))
-                tuple_ids.append(tuple + [[-1, -1, -1, -1, -1]] * (max_tuple - len(tuple)))
-            text_ids = torch.tensor(text_ids, dtype=torch.long)
-            num_ids = torch.tensor(num_ids, dtype=torch.long)
-            graphs = torch.tensor(graphs, dtype=torch.float)
-            equ_ids = torch.tensor(equ_ids, dtype=torch.long)
-            tuple_ids = torch.tensor(tuple_ids, dtype=torch.long)
-            text_pads = text_ids != tokenizer.pad_token_id
-            text_pads = text_pads.float()
-            num_pads = num_ids != -1
-            num_pads = num_pads.float()
-            equ_pads = equ_ids != -1
-            equ_ids[~equ_pads] = 0
-            equ_pads = equ_pads.float()
-            batches2.append((text_ids, text_pads, num_ids, num_pads, graphs, equ_ids, equ_pads, tuple_ids))
-
-            text_ids, num_ids, graphs, equ_ids, tuple_ids = [], [], [], [], []
-            max_text = max([len(x[2][0]) for x in pair])
-            max_num = max([len(x[2][1]) for x in pair])
-            max_equ = max([len(x[2][3]) for x in pair])
-            max_tuple = max([len(x[2][4]) for x in pair])
-            for _, p in enumerate(pair):
-                text, num, value, equ, tuple = p[2]
-                text_ids.append(text + [tokenizer.pad_token_id] * (max_text - len(text)))
-                num_ids.append(num + [-1] * (max_num - len(num)))
-                graphs.append(generate_graph(max_num, value))
-                equ_ids.append(equ + [-1] * (max_equ - len(equ)))
-                tuple_ids.append(tuple + [[-1, -1, -1, -1, -1]] * (max_tuple - len(tuple)))
-            text_ids = torch.tensor(text_ids, dtype=torch.long)
-            num_ids = torch.tensor(num_ids, dtype=torch.long)
-            graphs = torch.tensor(graphs, dtype=torch.float)
-            equ_ids = torch.tensor(equ_ids, dtype=torch.long)
-            tuple_ids = torch.tensor(tuple_ids, dtype=torch.long)
-            text_pads = text_ids != tokenizer.pad_token_id
-            text_pads = text_pads.float()
-            num_pads = num_ids != -1
-            num_pads = num_pads.float()
-            equ_pads = equ_ids != -1
-            equ_ids[~equ_pads] = 0
-            equ_pads = equ_pads.float()
-            batches3.append((text_ids, text_pads, num_ids, num_pads, graphs, equ_ids, equ_pads, tuple_ids))
-        return batches1, batches2, batches3
+            # text_ids, num_ids, graphs, equ_ids, tuple_ids = [], [], [], [], []
+            # max_text = max([len(x[1][0]) for x in pair])
+            # max_num = max([len(x[1][1]) for x in pair])
+            # max_equ = max([len(x[1][3]) for x in pair])
+            # max_tuple = max([len(x[1][4]) for x in pair])
+            # for _, p in enumerate(pair):
+            #     text, num, value, equ, tuple = p[1]
+            #     text_ids.append(text + [tokenizer.pad_token_id] * (max_text - len(text)))
+            #     num_ids.append(num + [-1] * (max_num - len(num)))
+            #     graphs.append(generate_graph(max_num, value))
+            #     equ_ids.append(equ + [-1] * (max_equ - len(equ)))
+            #     tuple_ids.append(tuple + [[-1, -1, -1, -1, -1]] * (max_tuple - len(tuple)))
+            # text_ids = torch.tensor(text_ids, dtype=torch.long)
+            # num_ids = torch.tensor(num_ids, dtype=torch.long)
+            # graphs = torch.tensor(graphs, dtype=torch.float)
+            # equ_ids = torch.tensor(equ_ids, dtype=torch.long)
+            # tuple_ids = torch.tensor(tuple_ids, dtype=torch.long)
+            # text_pads = text_ids != tokenizer.pad_token_id
+            # text_pads = text_pads.float()
+            # num_pads = num_ids != -1
+            # num_pads = num_pads.float()
+            # equ_pads = equ_ids != -1
+            # equ_ids[~equ_pads] = 0
+            # equ_pads = equ_pads.float()
+            # batches2.append((text_ids, text_pads, num_ids, num_pads, graphs, equ_ids, equ_pads, tuple_ids))
+            #
+            # text_ids, num_ids, graphs, equ_ids, tuple_ids = [], [], [], [], []
+            # max_text = max([len(x[2][0]) for x in pair])
+            # max_num = max([len(x[2][1]) for x in pair])
+            # max_equ = max([len(x[2][3]) for x in pair])
+            # max_tuple = max([len(x[2][4]) for x in pair])
+            # for _, p in enumerate(pair):
+            #     text, num, value, equ, tuple = p[2]
+            #     text_ids.append(text + [tokenizer.pad_token_id] * (max_text - len(text)))
+            #     num_ids.append(num + [-1] * (max_num - len(num)))
+            #     graphs.append(generate_graph(max_num, value))
+            #     equ_ids.append(equ + [-1] * (max_equ - len(equ)))
+            #     tuple_ids.append(tuple + [[-1, -1, -1, -1, -1]] * (max_tuple - len(tuple)))
+            # text_ids = torch.tensor(text_ids, dtype=torch.long)
+            # num_ids = torch.tensor(num_ids, dtype=torch.long)
+            # graphs = torch.tensor(graphs, dtype=torch.float)
+            # equ_ids = torch.tensor(equ_ids, dtype=torch.long)
+            # tuple_ids = torch.tensor(tuple_ids, dtype=torch.long)
+            # text_pads = text_ids != tokenizer.pad_token_id
+            # text_pads = text_pads.float()
+            # num_pads = num_ids != -1
+            # num_pads = num_pads.float()
+            # equ_pads = equ_ids != -1
+            # equ_ids[~equ_pads] = 0
+            # equ_pads = equ_pads.float()
+            # batches3.append((text_ids, text_pads, num_ids, num_pads, graphs, equ_ids, equ_pads, tuple_ids))
+        return batches1
 
     pretrain_model = AutoModel.from_pretrained(pretrain_model_path)
     pretrain_model.resize_token_embeddings(len(tokenizer))
@@ -246,41 +246,43 @@ def train(data_root_path, train_file, save_path, gpu, epochs, current_epoch=0):
         solver.train()
         loss_total = 0.0
         random.shuffle(train_batches)
-        batches1, batches2, batches3 = data_generator(train_batches, batch_size)
-        # bar = tqdm(range(len(batches1)), total=len(batches1))
-        # for i in bar:
-        #     batch1, batch2, batch3 = batches1[i], batches2[i], batches3[i]
-        #     batch1 = [_.to(device) for _ in batch1]
-        #     batch2 = [_.to(device) for _ in batch2]
-        #     batch3 = [_.to(device) for _ in batch3]
-        #
-        #     text_ids, text_pads, num_ids, num_pads, graphs, equ_ids, equ_pads, tuple_ids = batch1
-        #     loss1, encoded1 = train_double(solver, text_ids, text_pads, num_ids, num_pads, equ_ids, equ_pads, op_tokens,
-        #                                    constant_tokens)
-        #     text_ids, text_pads, num_ids, num_pads, graphs, equ_ids, equ_pads, tuple_ids = batch2
-        #     encoded2 = solver.encoder(text_ids, text_pads, num_ids, num_pads)
-        #     text_ids, text_pads, num_ids, num_pads, graphs, equ_ids, equ_pads, tuple_ids = batch3
-        #     encoded3 = solver.encoder(text_ids, text_pads, num_ids, num_pads)
-        #     'encoded1/2/3: anchor data/ positive/ negative '
-        #     'encoded1[text]: batch_size x text_length x embedding_size (e.g. 16*66*768)'
-        #     'encoded1[text][:, 0]: batch_size x embedding_size'
-        #     loss2 = cl_loss(encoded1['text'][:, 0], encoded2['text'][:, 0], encoded3['text'][:, 0], temperature)
-        #     loss = loss1 + alpha * loss2
-        #     # loss = loss1
-        #     loss_total += loss.item()
-        #     loss.backward()
-        #     optimizer.step()
-        #     scheduler.step()
-        #     optimizer.zero_grad()
-        #     if (i + 1) % 100 == 0:
-        #         torch.cuda.empty_cache()
-        #
-        # loss_total /= len(batches1)
-        # log.write("epoch:" + str(e) + "\tloss:" + str(loss_total) + "\n")
-        # logger.info(f"epoch: {e} - loss: {loss_total}")
+        # batches1, batches2, batches3 = data_generator(train_batches, batch_size)
+        batches1 = data_generator(train_batches, batch_size)
 
-        # if (e >= 60 and e % 5 == 0) or e >= 110:
-        if True:
+        bar = tqdm(range(len(batches1)), total=len(batches1))
+        for i in bar:
+            batch1 = batches1[i]
+            batch1 = [_.to(device) for _ in batch1]
+            # batch2 = [_.to(device) for _ in batch2]
+            # batch3 = [_.to(device) for _ in batch3]
+
+            text_ids, text_pads, num_ids, num_pads, graphs, equ_ids, equ_pads, tuple_ids = batch1
+            loss1, encoded1 = train_double(solver, text_ids, text_pads, num_ids, num_pads, equ_ids, equ_pads, op_tokens,
+                                           constant_tokens)
+            # text_ids, text_pads, num_ids, num_pads, graphs, equ_ids, equ_pads, tuple_ids = batch2
+            # encoded2 = solver.encoder(text_ids, text_pads, num_ids, num_pads)
+            # text_ids, text_pads, num_ids, num_pads, graphs, equ_ids, equ_pads, tuple_ids = batch3
+            # encoded3 = solver.encoder(text_ids, text_pads, num_ids, num_pads)
+            'encoded1/2/3: anchor data/ positive/ negative '
+            'encoded1[text]: batch_size x text_length x embedding_size (e.g. 16*66*768)'
+            'encoded1[text][:, 0]: batch_size x embedding_size'
+            # loss2 = cl_loss(encoded1['text'][:, 0], encoded2['text'][:, 0], encoded3['text'][:, 0], temperature)
+            loss2 = 0
+            loss = loss1 + alpha * loss2
+            # loss = loss1
+            loss_total += loss.item()
+            loss.backward()
+            optimizer.step()
+            scheduler.step()
+            optimizer.zero_grad()
+            if (i + 1) % 100 == 0:
+                torch.cuda.empty_cache()
+
+        loss_total /= len(batches1)
+        log.write("epoch:" + str(e) + "\tloss:" + str(loss_total) + "\n")
+        logger.info(f"epoch: {e} - loss: {loss_total}")
+
+        if (e >= 60 and e % 5 == 0) or e >= 110:
             solver.eval()
             value_ac = 0
             equation_ac = 0
@@ -471,13 +473,11 @@ if __name__ == '__main__':
     # train(data_root_path, train_file, checkpoints_path, gpu=gpu_id, epochs=120, current_epoch=0)
 
     'MathQA'
-    # pretrain_model_path = 'bert-base-uncased'
-    pretrain_model_path = '../pretrained_model/bert-base-chinese'
-
+    pretrain_model_path = 'bert-large-uncased'
     gpu_id = args.device
     run_name = args.run_name
     train_file = args.train_file
-    data_name = 'svamp'
+    data_name = 'mathqa'
     data_root_path = f'../data/mathqa/'
     folds_scores = []
 

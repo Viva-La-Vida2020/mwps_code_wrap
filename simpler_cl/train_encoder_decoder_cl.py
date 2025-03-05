@@ -15,7 +15,8 @@ from preprocess.metric import compute_prefix_tree_result
 MAX_TEXT_LEN = 256
 MAX_EQU_LEN = 60
 EMBEDDING_SIZE = 128
-EMBEDDING_BERT = 768
+# EMBEDDING_BERT = 768
+EMBEDDING_BERT = 1024
 TEMPERATURE = 0.05
 
 
@@ -54,6 +55,8 @@ def train_simpler_cl(args):
     if args.dataset in ['Math23k']:
         if args.tokenizer == 'bert':
             pretrain_model_path = "yechen/bert-base-chinese"
+        elif args.tokenizer == 'bert-large':
+            pretrain_model_path = "yechen/bert-large-chinese"
         elif args.tokenizer == 'bert-wwm':
             pretrain_model_path = "hfl/chinese-bert-wwm-ext"
             # pretrain_model_path = "../pretrained_model/chinese-bert-wwm-ext"
@@ -72,12 +75,14 @@ def train_simpler_cl(args):
     elif args.dataset in ['MathQA']:
         if args.tokenizer == 'bert':
             pretrain_model_path = "bert-base-uncased"
+        elif args.tokenizer == 'bert-large':
+            pretrain_model_path = "bert-large-uncased"
 
         config = AutoConfig.from_pretrained(pretrain_model_path)
         tokenizer = BertTokenizer.from_pretrained(pretrain_model_path)
         epochs = args.epoch
         data_root_path = '../data/mathqa/'
-        train_data = load_data(data_root_path + 'train_cl.jsonl')
+        train_data = load_data(data_root_path + 'train.jsonl')
         dev_data = load_data(data_root_path + 'test.jsonl')
         test_data = load_data(data_root_path + 'test.jsonl')
     elif args.dataset in ['SVAMP']:
@@ -151,7 +156,7 @@ def train_simpler_cl(args):
         for i, s in enumerate(src1):
             if s in number_tokens_ids:
                 num.append(i)
-        value = [eval(x) for x in d['nums']]
+        value = [eval(str(x)) for x in d['nums']]
         dev_batches.append((src1, num, value, d))
 
     def data_generator(train_batches, batch_size):
@@ -265,7 +270,7 @@ def train_simpler_cl(args):
         loss_ce_total /= len(batches1)
         loss_c1_total /= len(batches1)
         logger.info(f"epoch: {e} - loss: {loss_total}- loss CE: {loss_ce_total}  - loss cl: {loss_c1_total}")
-        if e >= 60:
+        if e >= 20:
             solver.eval()
 
             value_ac = 0
@@ -353,7 +358,7 @@ def test(args):
         for i, s in enumerate(src1):
             if s in number_tokens_ids:
                 num.append(i)
-        value = [eval(x) for x in d['nums']]
+        value = [eval(str(x)) for x in d['nums']]
         test_batches.append((src1, num, value, d))
 
     pretrain_model = AutoModel.from_pretrained(args.ckpt)
@@ -410,10 +415,10 @@ def get_parser():
     parser.add_argument('--device', default=0, type=int)  #WARNING: DO NOT USE DEVICES=[4, 5]!!!
     parser.add_argument('--batch_size', default=16, type=int)
     parser.add_argument('--seed', default=41, type=int)
-    parser.add_argument('--tokenizer', default='bert-wwm', type=str, choices=['bert', 'bert-wwm', 'roberta-wwm'])
+    parser.add_argument('--tokenizer', default='bert-large', type=str, choices=['bert', 'bert-large', 'bert-wwm', 'roberta-wwm'])
     parser.add_argument('--lr', default=5e-5, type=float)
     parser.add_argument('--epoch', default=120, type=int)
-    parser.add_argument('--dataset', default='Math23k', type=str, choices=['Math23k', 'AsDiv-A', 'SVAMP', 'MathQA'])
+    parser.add_argument('--dataset', default='MathQA', type=str, choices=['Math23k', 'AsDiv-A', 'SVAMP', 'MathQA'])
     parser.add_argument('--CL', default='SimplerCL', type=str, choices=['SimplerCL', 'SimCLR', 'NoCL'])
     parser.add_argument('--similarity', default='TLWD', type=str, choices=['TLWD', 'TED'])
     parser.add_argument('--H', action='store_true', default=True, help='CL from Holistic View')

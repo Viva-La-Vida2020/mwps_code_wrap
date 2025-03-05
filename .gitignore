@@ -1,3 +1,7 @@
 .idea
 pretrained_model
 data
+*.png
+__pycache__
+checkpoints
+lightning_logs
