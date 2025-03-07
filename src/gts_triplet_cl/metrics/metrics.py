@@ -49,11 +49,11 @@ def compute_expression(expression, notation="prefix"):
     for token in expression:
         if token not in operators:
             try:
-                stack.append(eval(token))
+                stack.append(eval(str(token)))
             except (SyntaxError, NameError):
                 return None
         elif len(stack) > 1:
-            b, a = stack.pop(), stack.pop() if notation != "postfix" else (stack.pop(), stack.pop())
+            a, b = stack.pop(), stack.pop() if notation != "postfix" else (stack.pop(), stack.pop())
             if token == "+":
                 stack.append(a + b)
             elif token == "-":

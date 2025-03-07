@@ -15,8 +15,8 @@ from preprocess.metric import compute_prefix_tree_result
 MAX_TEXT_LEN = 256
 MAX_EQU_LEN = 60
 EMBEDDING_SIZE = 128
-# EMBEDDING_BERT = 768
-EMBEDDING_BERT = 1024
+EMBEDDING_BERT = 768
+# EMBEDDING_BERT = 1024
 TEMPERATURE = 0.05
 
 
@@ -54,7 +54,8 @@ def train_simpler_cl(args):
     # Load dataset
     if args.dataset in ['Math23k']:
         if args.tokenizer == 'bert':
-            pretrain_model_path = "yechen/bert-base-chinese"
+            # pretrain_model_path = "yechen/bert-base-chinese"
+            pretrain_model_path = "../pretrained_model/bert-base-chinese"
         elif args.tokenizer == 'bert-large':
             pretrain_model_path = "yechen/bert-large-chinese"
         elif args.tokenizer == 'bert-wwm':
@@ -67,7 +68,7 @@ def train_simpler_cl(args):
         tokenizer = BertTokenizer.from_pretrained(pretrain_model_path)
         epochs = args.epoch
         data_root_path = '../data/math23k/'
-        train_data = load_data(data_root_path + 'train.jsonl')
+        train_data = load_data(data_root_path + 'train_simpler.jsonl')
         # dev_data = load_data(data_root_path + 'Math23K_dev.jsonl')
         # test_data = load_data(data_root_path + 'Math23K_test.jsonl')
         dev_data = load_data(data_root_path + 'test.jsonl')
@@ -415,12 +416,12 @@ def get_parser():
     parser.add_argument('--device', default=0, type=int)  #WARNING: DO NOT USE DEVICES=[4, 5]!!!
     parser.add_argument('--batch_size', default=16, type=int)
     parser.add_argument('--seed', default=41, type=int)
-    parser.add_argument('--tokenizer', default='bert-large', type=str, choices=['bert', 'bert-large', 'bert-wwm', 'roberta-wwm'])
+    parser.add_argument('--tokenizer', default='bert', type=str, choices=['bert', 'bert-large', 'bert-wwm', 'roberta-wwm'])
     parser.add_argument('--lr', default=5e-5, type=float)
     parser.add_argument('--epoch', default=120, type=int)
-    parser.add_argument('--dataset', default='MathQA', type=str, choices=['Math23k', 'AsDiv-A', 'SVAMP', 'MathQA'])
+    parser.add_argument('--dataset', default='Math23k', type=str, choices=['Math23k', 'AsDiv-A', 'SVAMP', 'MathQA'])
     parser.add_argument('--CL', default='SimplerCL', type=str, choices=['SimplerCL', 'SimCLR', 'NoCL'])
-    parser.add_argument('--similarity', default='TLWD', type=str, choices=['TLWD', 'TED'])
+    parser.add_argument('--similarity', default='TED', type=str, choices=['TLWD', 'TED'])
     parser.add_argument('--H', action='store_true', default=True, help='CL from Holistic View')
     parser.add_argument('--P', action='store_true', default=True, help='CL from Primary View')
     parser.add_argument('--L', action='store_true', default=True, help='CL from Longest View')

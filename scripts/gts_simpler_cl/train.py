@@ -8,11 +8,16 @@ from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor, De
 from pytorch_lightning import loggers as pl_loggers
 
 from transformers import AdamW, get_linear_schedule_with_warmup
-from src.gts.models.solver import Solver  # Import the refactored Solver class
-from src.gts.models.encoder import Encoder
-from src.gts.models.tree_decoder import TreeDecoder
-from src.gts.metrics.metrics import compute_prefix_tree_result
-from data.data_module_gts import MathDataModule
+from src.gts_simpler_cl.models.solver import Solver  # Import the refactored Solver class
+from src.gts_simpler_cl.models.encoder import Encoder
+from src.gts_simpler_cl.models.multiview_projector import Projector
+from src.gts_simpler_cl.models.tree_decoder import TreeDecoder
+from src.gts_simpler_cl.metrics.metrics import compute_prefix_tree_result
+from data.data_module_simpler import MathDataModule
+
+
+EMBEDDING_SIZE = 128
+EMBEDDING_BERT = 768
 
 
 class MathSolver(pl.LightningModule):
@@ -20,7 +25,7 @@ class MathSolver(pl.LightningModule):
     PyTorch Lightning Module for training and evaluating the Math Word Problem solver.
     """
 
-    def __init__(self, args, encoder, decoder, tokenizer, op_tokens, constant_tokens, id_dict, total_steps):
+    def __init__(self, args, encoder, decoder, projector, tokenizer, op_tokens, constant_tokens, id_dict, total_steps):
         """
         Initializes the MathSolver.
 
@@ -46,7 +51,7 @@ class MathSolver(pl.LightningModule):
         self.total_steps = total_steps
 
         # Initialize the Solver (which encapsulates the encoder + decoder)
-        self.solver = Solver(encoder, decoder)
+        self.solver = Solver(encoder, decoder, projector, similarity=self.hparams.similarity)
 
         # Validation metrics accumulators
         self.correct_value_count = 0
@@ -84,12 +89,15 @@ class MathSolver(pl.LightningModule):
         Returns:
             torch.Tensor: Computed loss.
         """
-        loss, _ = self.solver.train_step(
+        loss_solver, loss_cl, _ = self.solver.train_step(
             batch["text_ids"], batch["text_pads"], batch["num_ids"], batch["num_pads"],
-            batch["equ_ids"], batch["equ_pads"], self.op_tokens, self.constant_tokens
-        )
+            batch["equ_ids"], batch["equ_pads"], self.op_tokens, self.constant_tokens,
+            batch["holistic_views"], batch["primary_views"], batch["longest_views"])
+        loss = loss_solver + self.hparams.alpha * loss_cl
 
-        self.log("train_loss", loss, prog_bar=True, logger=True, on_epoch=True)
+        self.log("loss", loss, prog_bar=True, logger=True, on_epoch=True)
+        self.log("loss_solver", loss_solver, prog_bar=True, logger=True, on_epoch=True)
+        self.log("loss_cl", loss_cl, prog_bar=True, logger=True, on_epoch=True)
 
         return loss
 
@@ -111,7 +119,7 @@ class MathSolver(pl.LightningModule):
 
         # Individual sample correctness
         sample_val_correct, sample_equ_correct = compute_prefix_tree_result(
-            tree_out, [x[0] for x in batch["prefix"]], float(batch["answer"]), [float(x) for x in batch["nums"]]
+            tree_out, [x[0] for x in batch["prefix"]], float(batch["answer"]), [float(x[0]) for x in batch["nums"]]
         )
 
         # Accumulate for dataset-wide evaluation
@@ -191,19 +199,20 @@ class MathSolver(pl.LightningModule):
 
 def get_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--save_dir', default='experiments/GTS_MathQA_NoCL', type=str)
+    parser.add_argument('--save_dir', default='experiments/GTS_Math23k_SimplerCL', type=str)
     parser.add_argument('--device', default=0, type=int)
     parser.add_argument('--batch_size', default=16, type=int)
     parser.add_argument('--seed', default=1, type=int)
     parser.add_argument('--lr', default=5e-5, type=float)
     parser.add_argument('--weight_decay', default=0.01, type=float)
     parser.add_argument('--warmup_ratio', default=0.1, type=float)
+    parser.add_argument('--similarity', default='TLWD', type=str)
     parser.add_argument('--alpha', default=0.1, type=float)
     parser.add_argument('--epoch', default=120, type=int)
     parser.add_argument('--max_equ_len', default=45, type=int)
     parser.add_argument('--max_text_len', default=256, type=int)
-    parser.add_argument('--save_top_k', default=1, type=int)
-    parser.add_argument('--check_val_every_n_epoch', default=10, type=int)
+    parser.add_argument('--save_top_k', default=5, type=int)
+    parser.add_argument('--check_val_every_n_epoch', default=5, type=int)
     parser.add_argument('--log_step_ratio', default=0.001, type=float)
     parser.add_argument('--pretrained_model', default='../../pretrained_model/bert-base-chinese', type=str)
 
@@ -218,7 +227,7 @@ if __name__ == '__main__':
     # Load DataModule
     data_module = MathDataModule(
         data_dir="../../data/math23k",
-        train_file="train_cl.jsonl",
+        train_file="train_simpler.jsonl",
         test_file="test.jsonl",
         tokenizer_path=args.pretrained_model,
         batch_size=args.batch_size,
@@ -235,7 +244,8 @@ if __name__ == '__main__':
     # Initialize Encoder & Decoder
     pretrained_model.resize_token_embeddings(len(tokenizer))
     encoder = Encoder(pretrained_model)
-    decoder = TreeDecoder(config, len(data_module.op_tokens), len(data_module.constant_tokens), embedding_size=128)
+    decoder = TreeDecoder(config, len(data_module.op_tokens), len(data_module.constant_tokens), embedding_size=EMBEDDING_SIZE)
+    projector = Projector(EMBEDDING_BERT, EMBEDDING_SIZE, len_subspace=3)  # holistic, root, longest_path
 
     # Calculate total training steps for scheduler
     total_steps = len(data_module.train_dataloader()) * args.epoch
@@ -245,6 +255,7 @@ if __name__ == '__main__':
         args=args,
         encoder=encoder,
         decoder=decoder,
+        projector=projector,
         tokenizer=tokenizer,
         op_tokens=data_module.op_tokens,
         constant_tokens=data_module.constant_tokens,

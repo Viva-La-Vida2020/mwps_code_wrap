@@ -1,4 +1,3 @@
-import re
 import copy
 
 def out_expression_list(test, nums):
