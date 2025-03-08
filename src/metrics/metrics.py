@@ -1,6 +1,3 @@
-import copy
-
-
 def convert_expression(test, nums):
     """
     Converts symbolic math expressions into numeric values where applicable.

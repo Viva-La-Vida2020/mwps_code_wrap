@@ -12,7 +12,7 @@ from src.gts_simpler_cl.models.solver import Solver  # Import the refactored Sol
 from src.gts_simpler_cl.models.encoder import Encoder
 from src.gts_simpler_cl.models.multiview_projector import Projector
 from src.gts_simpler_cl.models.tree_decoder import TreeDecoder
-from src.gts_simpler_cl.metrics.metrics import compute_prefix_tree_result
+from src.metrics.metrics import compute_prefix_tree_result
 from data.data_module_simpler import MathDataModule
 
 
@@ -100,6 +100,15 @@ class MathSolver(pl.LightningModule):
         self.log("loss_cl", loss_cl, prog_bar=True, logger=True, on_epoch=True)
 
         return loss
+
+    def on_train_epoch_end(self):
+        if self.current_epoch < 60:
+            return
+
+        if self.current_epoch >= self.trainer.max_epochs - 10:
+            self.trainer.validate(self)
+        elif self.current_epoch % 5 == 0:
+            self.trainer.validate(self)
 
     def validation_step(self, batch, batch_idx):
         """

@@ -1,8 +1,9 @@
-.idea
-pretrained_model
-*.png
 __pycache__
-checkpoints
-lightning_logs
+.idea
+*.png
 *.zip
 data_prep.py
+experiments
+pretrained_model
+checkpoints
+prep_triplets
