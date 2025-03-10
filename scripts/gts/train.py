@@ -93,15 +93,6 @@ class MathSolver(pl.LightningModule):
 
         return loss
 
-    def on_train_epoch_end(self):
-        if self.current_epoch < 60:
-            return
-
-        if self.current_epoch >= self.trainer.max_epochs - 10:
-            self.trainer.validate(self)
-        elif self.current_epoch % 5 == 0:
-            self.trainer.validate(self)
-
     def validation_step(self, batch, batch_idx):
         """
         Performs a single validation step.
@@ -120,7 +111,7 @@ class MathSolver(pl.LightningModule):
 
         # Individual sample correctness
         sample_val_correct, sample_equ_correct = compute_prefix_tree_result(
-            tree_out, [x[0] for x in batch["prefix"]], float(batch["answer"]), [float(x) for x in batch["nums"]]
+            tree_out, [x[0] for x in batch["prefix"]], float(batch["answer"]), [float(x[0]) for x in batch["nums"]]
         )
 
         # Accumulate for dataset-wide evaluation
@@ -165,9 +156,14 @@ class MathSolver(pl.LightningModule):
         """
         Default kwargs used when initializing pl.Trainer
         """
+        tb_logger = pl_loggers.TensorBoardLogger(save_dir=self.hparams.save_dir)
+        csv_logger = pl_loggers.CSVLogger(save_dir=self.hparams.save_dir, version=tb_logger.version)
+        loggers = [tb_logger, csv_logger]
+        log_every_n_steps = max(1, int(self.hparams.log_step_ratio * self.total_steps))
+
         checkpoint_callback = ModelCheckpoint(
             monitor="val_acc",
-            dirpath=os.path.join(self.hparams.save_dir, "checkpoints"),
+            dirpath=os.path.join(tb_logger.save_dir, f"lightning_logs/version_{tb_logger.version}", "checkpoints"),
             filename="model-{epoch:03d}",
             save_top_k=self.hparams.save_top_k,
             save_last=True,
@@ -176,21 +172,16 @@ class MathSolver(pl.LightningModule):
         lr_callback = LearningRateMonitor(logging_interval='step')
         callbacks = [checkpoint_callback, lr_callback]
 
-        tb_logger = pl_loggers.TensorBoardLogger(save_dir=self.hparams.save_dir)
-        csv_logger = pl_loggers.CSVLogger(save_dir=self.hparams.save_dir)
-        loggers = [tb_logger, csv_logger]
-        log_every_n_steps = max(1, int(self.hparams.log_step_ratio * self.total_steps))
-
         ret = dict(
             callbacks=callbacks,
             logger=loggers,
             log_every_n_steps=log_every_n_steps,
             default_root_dir=self.hparams.save_dir,
             accelerator="gpu",
-            # strategy="ddp",
-            # optimization
+            devices=self.hparams.devices,
             max_epochs=self.hparams.epoch,
-            # check_val_every_n_epoch=self.hparams.check_val_every_n_epoch,
+            check_val_every_n_epoch=self.hparams.check_val_every_n_epoch,
+            # strategy="ddp",
             # limit_train_batches=0.1,  # Only use 10% of the training data
             # limit_val_batches=0.01,  # Only use 10% of validation data
         )
@@ -200,8 +191,8 @@ class MathSolver(pl.LightningModule):
 
 def get_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--save_dir', default='experiments/GTS_MathQA_NoCL', type=str)
-    parser.add_argument('--device', default=0, type=int)
+    parser.add_argument('--save_dir', default='experiments/Test', type=str)
+    parser.add_argument('--devices', type=int, nargs='+', default=[0, ], help='List of GPU devices to use')
     parser.add_argument('--batch_size', default=16, type=int)
     parser.add_argument('--seed', default=1, type=int)
     parser.add_argument('--lr', default=5e-5, type=float)
@@ -212,9 +203,10 @@ def get_parser():
     parser.add_argument('--max_equ_len', default=45, type=int)
     parser.add_argument('--max_text_len', default=256, type=int)
     parser.add_argument('--save_top_k', default=1, type=int)
-    parser.add_argument('--check_val_every_n_epoch', default=10, type=int)
+    parser.add_argument('--check_val_every_n_epoch', default=1, type=int)
     parser.add_argument('--log_step_ratio', default=0.001, type=float)
-    parser.add_argument('--pretrained_model', default='../../pretrained_model/bert-base-chinese', type=str)
+    parser.add_argument('--pretrained_model', default='../../pretrained_model/bert-base-chinese', type=str,
+                        choices=['hfl/chinese-bert-wwm-ext', 'hfl/chinese-roberta-wwm-ext', 'bert-base-uncased'])
 
     return parser
 
@@ -226,8 +218,8 @@ if __name__ == '__main__':
 
     # Load DataModule
     data_module = MathDataModule(
-        data_dir="../../data/math23k",
-        train_file="train_cl.jsonl",
+        data_dir="data/math23k",
+        train_file="train.jsonl",
         test_file="test.jsonl",
         tokenizer_path=args.pretrained_model,
         batch_size=args.batch_size,

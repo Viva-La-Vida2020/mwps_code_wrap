@@ -195,50 +195,10 @@ class MathDataModule(pl.LightningDataModule):
 
     def train_dataloader(self):
         return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=0,
-                          collate_fn=self.custom_collate_fn)
+                          collate_fn=self.custom_collate_fn, drop_last=True)
 
     def val_dataloader(self):
         return DataLoader(self.val_dataset, batch_size=1, shuffle=False, num_workers=0,)
 
     def test_dataloader(self):
         return DataLoader(self.test_dataset, batch_size=1, shuffle=False, num_workers=0,)
-
-
-if __name__ == '__main__':
-    'Unit Test'
-    # Initialize the DataModule
-    data_module = MathDataModule(
-        data_dir="math23k",  # Change this to your dataset directory
-        train_file="train_triplet_ted.jsonl",  # Ensure this file exists in `data/`
-        test_file="test.jsonl",  # Ensure this file exists in `data/`
-        tokenizer_path="../pretrained_model/bert-base-chinese",  # Change if using another tokenizer
-        batch_size=16,  # Small batch size for easy debugging
-        max_text_len=256
-    )
-
-    # Setup data (mimics Lightning's internal workflow)
-    data_module.setup()
-
-    # Get the train dataloader
-    train_loader = data_module.train_dataloader()
-
-    # Iterate through a few batches
-    print("🔍 Inspecting training batches...")
-
-    for batch_idx, batch in enumerate(train_loader):
-        print(f"\n🟢 Batch {batch_idx + 1}")
-
-        print("📌 text_ids:", batch["text_ids"].shape)
-        print("📌 text_pads:", batch["text_pads"].shape)
-        print("📌 num_ids:", batch["num_ids"].shape)
-        print("📌 equ_ids:", batch["equ_ids"].shape)
-
-        # Print actual data
-        print("\n📝 Sample Data:")
-        print("text_ids:", batch["text_ids"][0].tolist())
-        print("num_ids:", batch["num_ids"][0].tolist())
-        print("equ_ids:", batch["equ_ids"][0].tolist())
-
-        # Stop after inspecting 3 batches
-        if batch_idx == 2:
-            break
