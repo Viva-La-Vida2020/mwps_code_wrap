@@ -1,20 +1,19 @@
 import argparse
 import os
-
 from transformers import AutoModel, AutoConfig, BertTokenizer
 import torch
 import pytorch_lightning as pl
-from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor, DeviceStatsMonitor, Callback
+from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
 from pytorch_lightning import loggers as pl_loggers
-
 from transformers import AdamW, get_linear_schedule_with_warmup
-from src.gts_simpler_cl.models.solver import Solver  # Import the refactored Solver class
+
+from src.gts_simpler_cl.models.solver import Solver
 from src.gts_simpler_cl.models.encoder import Encoder
 from src.gts_simpler_cl.models.multiview_projector import Projector
 from src.gts_simpler_cl.models.tree_decoder import TreeDecoder
 from src.metrics.metrics import compute_prefix_tree_result
 from data.data_module_simpler import MathDataModule
-
+from src.utils.utils import save_json
 
 EMBEDDING_SIZE = 128
 EMBEDDING_BERT = 768
@@ -143,6 +142,58 @@ class MathSolver(pl.LightningModule):
         self.log("val_acc", value_accuracy, prog_bar=True, logger=True)
         self.log("equ_acc", equation_accuracy, prog_bar=True, logger=True)
 
+    def test_step(self, batch, batch_idx):
+        """
+        Performs a single validation step.
+
+        Args:
+            batch (dict): Input batch from DataLoader.
+            batch_idx (int): Index of the batch.
+        """
+        tree_res = self.solver.evaluate_step(
+            batch["text_ids"], batch["text_pads"], batch["num_ids"], batch["num_pads"],
+            self.op_tokens, self.constant_tokens, self.hparams.max_equ_len, beam_size=3
+        )
+
+        tree_out, tree_score = tree_res.out, tree_res.score
+        tree_out = [self.id_dict[x] for x in tree_out]
+
+        # Individual sample correctness
+        sample_val_correct, sample_equ_correct = compute_prefix_tree_result(
+            tree_out, [x[0] for x in batch["prefix"]], float(batch["answer"]), [float(x[0]) for x in batch["nums"]]
+        )
+
+        # Accumulate for dataset-wide evaluation
+        self.correct_value_count += 1 if sample_val_correct else 0
+        self.correct_equation_count += 1 if sample_equ_correct else 0
+        self.total_samples += 1
+
+        result = {
+            "prefix": [x[0] for x in batch["prefix"]],
+            "prediction": tree_out,
+            "val_correction": sample_val_correct,
+            "equ_correction": sample_equ_correct,
+        }
+        self.test_results.append(result)
+
+    def on_test_epoch_end(self):
+        """
+        Computes dataset-wide validation accuracy at the end of an epoch.
+        """
+        value_accuracy = self.correct_value_count / self.total_samples
+        equation_accuracy = self.correct_equation_count / self.total_samples
+
+        # Reset accumulators for the next epoch
+        self.correct_value_count = 0
+        self.correct_equation_count = 0
+        self.total_samples = 0
+
+        # Log final validation accuracy for dataset
+        self.log("val_acc", value_accuracy, prog_bar=True, logger=True)
+        self.log("equ_acc", equation_accuracy, prog_bar=True, logger=True)
+
+        save_json(self.test_results, os.path.join(self.hparams.pretrained_model, f"test/{self.hparams.ckpt}/test_results.jsonl"))
+
     def configure_optimizers(self):
         """
         Configure the optimizer and scheduler in Lightning
@@ -213,27 +264,30 @@ def get_parser():
     parser.add_argument('--save_top_k', default=1, type=int)
     parser.add_argument('--check_val_every_n_epoch', default=1, type=int)
     parser.add_argument('--log_step_ratio', default=0.001, type=float)
+    parser.add_argument('--dataset', default='math23k', type=str, choices=['math23k', 'mathqa'])
+    parser.add_argument('--similarity', default='TLWD', type=str, choices=['TLWD', 'TED'])
     parser.add_argument('--pretrained_model', default='hfl/chinese-bert-wwm-ext', type=str,
                         choices=['hfl/chinese-bert-wwm-ext', 'hfl/chinese-roberta-wwm-ext', 'bert-base-uncased'])
+    parser.add_argument('--test', action='store_true', default=False)
+    parser.add_argument('--ckpt', type=str)
 
     return parser
 
 
 if __name__ == '__main__':
     args = get_parser().parse_args()
-
     pl.seed_everything(args.seed)
 
     # Load DataModule
+    data_path = f"data/{args.dataset}"
     data_module = MathDataModule(
-        data_dir="data/math23k",
+        data_dir=data_path,
         train_file="train_simpler.jsonl",
         test_file="test.jsonl",
         tokenizer_path=args.pretrained_model,
         batch_size=args.batch_size,
         max_text_len=args.max_text_len,
     )
-
     data_module.setup()
 
     # Load Pretrained Model
@@ -267,6 +321,9 @@ if __name__ == '__main__':
     trainer_kwargs = model.set_trainer_kwargs()
     trainer = pl.Trainer(**trainer_kwargs)
 
-    trainer.fit(model, datamodule=data_module)
-
+    if args.test:
+        trainer.test(model, datamodule=data_module, ckpt_path=args.ckpt)
+    else:
+        trainer.fit(model, datamodule=data_module)
+        trainer.test(ckpt_path="best", datamodule=data_module)
 

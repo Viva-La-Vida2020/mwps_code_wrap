@@ -163,3 +163,19 @@ class MathDataModule(pl.LightningDataModule):
 
     def test_dataloader(self):
         return DataLoader(self.test_dataset, batch_size=1, shuffle=False, num_workers=0,)
+
+if __name__ == '__main__':
+    data_module = MathDataModule(
+        data_dir="../data/math23k",
+        train_file="train.jsonl",
+        test_file="test.jsonl",
+        tokenizer_path='../pretrained_model/bert-base-chinese/',
+        batch_size=16,
+        max_text_len=256,
+    )
+
+    data_module.setup()
+
+    train_loader = data_module.val_dataloader()
+    for batch in train_loader:
+        print(batch)

@@ -57,6 +57,58 @@ def compute_prefix_expression(pre_fix):
     return None
 
 
+def compute_expression(expression, notation="prefix"):
+    """
+    Evaluates a mathematical expression given in prefix, infix, or postfix notation.
+
+    Args:
+        expression (list): List of string elements representing a math expression.
+        notation (str): Type of notation ('prefix', 'infix', 'postfix').
+
+    Returns:
+        float or None: Computed result or None if evaluation fails.
+    """
+    operators = {"+", "-", "^", "*", "/"}
+    stack = []
+
+    if notation == "prefix":
+        expression = list(reversed(expression))
+    elif notation == "infix":
+        try:
+            expr_str = ''.join(expression).replace('[', '(').replace(']', ')').replace('^', '**')
+            return eval(expr_str)
+        except (SyntaxError, ZeroDivisionError, NameError):
+            return None
+
+    for token in expression:
+        if token not in operators:
+            try:
+                stack.append(eval(str(token)))
+            except (SyntaxError, NameError):
+                return None
+        elif len(stack) > 1:
+            try:
+                a, b = stack.pop(), stack.pop() if notation != "postfix" else (stack.pop(), stack.pop())
+                if token == "+":
+                    stack.append(a + b)
+                elif token == "-":
+                    stack.append(a - b)
+                elif token == "*":
+                    stack.append(a * b)
+                elif token == "/":
+                    stack.append(a / b)
+                elif token == "^":
+                    stack.append(a ** b)
+            except OverflowError:
+                return None
+            except ZeroDivisionError:
+                return None
+            except Exception as e:
+                print(f"Unexpected error: {e}")
+                return None
+    return stack[0] if len(stack) == 1 else None
+
+
 def compute_tree_result(test, target, answer, nums, notation="prefix"):
     """
     Validates a computed mathematical expression against a target.
@@ -81,7 +133,8 @@ def compute_tree_result(test, target, answer, nums, notation="prefix"):
         return True, True
 
     try:
-        computed_result = compute_prefix_expression(test_expr)
+        computed_result = compute_expression(test_expr, notation)
+        computed_result_bug = compute_prefix_expression(test_expr)
         return (abs(computed_result - answer) < 1e-3, False) if computed_result is not None else (False, False)
     except TypeError:
         return False, False
@@ -92,9 +145,16 @@ def compute_prefix_tree_result(test, target, answer, nums):
     return compute_tree_result(test, target, answer, nums, notation="prefix")
 
 
-# def compute_infix_tree_result(test, target, answer, nums):
-#     return compute_tree_result(test, target, answer, nums, notation="infix")
-#
-#
-# def compute_postfix_tree_result(test, target, answer, nums):
-#     return compute_tree_result(test, target, answer, nums, notation="postfix")
+def compute_infix_tree_result(test, target, answer, nums):
+    return compute_tree_result(test, target, answer, nums, notation="infix")
+
+
+def compute_postfix_tree_result(test, target, answer, nums):
+    return compute_tree_result(test, target, answer, nums, notation="postfix")
+
+
+if __name__ == '__main__':
+    print(compute_prefix_tree_result(test=["/", "-", "/", "N_1", "N_2", "/", "N_0", "N_2", "C_2"],
+                                     target=["/", "-", "N_1", "N_0", "*", "N_2", "C_2"],
+                                     answer=2,
+                                     nums=[49.0, 77.0, 7.0]))
