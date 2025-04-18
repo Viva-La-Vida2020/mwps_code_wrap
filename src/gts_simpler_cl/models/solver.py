@@ -7,7 +7,7 @@ from .similarity_ted import multiview_score_ted
 from .sup_con_loss import SupConLoss
 
 class Solver(nn.Module):
-    def __init__(self, encoder, decoder, projector, similarity='TLWD'):
+    def __init__(self, encoder, decoder, projector, similarity='tlwd'):
         """
         Solver model that combines an encoder and a tree-based decoder.
         """
@@ -197,9 +197,9 @@ class Solver(nn.Module):
 
     def _simpler_cl(self, encoded_text, holistic_views, primary_views, longest_views):
         features = self.projector(encoded_text)
-        if self.similarity == 'TLWD':
+        if self.similarity == 'tlwd':
             multiview_scores = multiview_score_tlwd(holistic_views)
-        elif self.similarity == 'TED':
+        elif self.similarity == 'ted':
             multiview_scores = multiview_score_ted(holistic_views, primary_views, longest_views)
 
         criterion = SupConLoss()

@@ -215,8 +215,8 @@ class MathSolver(pl.LightningModule):
         """
         Default kwargs used when initializing pl.Trainer
         """
-        tb_logger = pl_loggers.TensorBoardLogger(save_dir=self.hparams.save_dir)
-        csv_logger = pl_loggers.CSVLogger(save_dir=self.hparams.save_dir, version=tb_logger.version)
+        tb_logger = pl_loggers.TensorBoardLogger(save_dir=self.hparams.save_path)
+        csv_logger = pl_loggers.CSVLogger(save_dir=self.hparams.save_path, version=tb_logger.version)
         loggers = [tb_logger, csv_logger]
         log_every_n_steps = max(1, int(self.hparams.log_step_ratio * self.total_steps))
 
@@ -235,7 +235,7 @@ class MathSolver(pl.LightningModule):
             callbacks=callbacks,
             logger=loggers,
             log_every_n_steps=log_every_n_steps,
-            default_root_dir=self.hparams.save_dir,
+            default_root_dir=self.hparams.save_path,
             accelerator="gpu",
             devices=self.hparams.devices,
             max_epochs=self.hparams.epoch,

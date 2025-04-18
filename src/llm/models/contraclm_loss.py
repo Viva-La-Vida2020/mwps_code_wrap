@@ -1,5 +1,6 @@
+import torch
 from torch import nn
-
+import torch.nn.functional as F
 
 class ContraCLMSeqLoss(nn.Module):
     def __init__(self, pad_token_id, temperature=0.05):

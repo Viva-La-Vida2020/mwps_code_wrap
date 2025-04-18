@@ -1,28 +1,32 @@
 import os
 import torch
 import argparse
-from pytorch_lightning import LightningModule, Trainer
+from pytorch_lightning import LightningModule, Trainer, LightningDataModule
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping, LearningRateMonitor, Callback
-from torch.utils.data import DataLoader
-from transformers import AutoModelForCausalLM, AdamW, get_linear_schedule_with_warmup
+from torch.utils.data import DataLoader, Dataset
+from transformers import AutoModelForCausalLM, AutoTokenizer, AdamW, get_linear_schedule_with_warmup
 from data.data_module_llm import MathWordProblemDataModule
 from src.utils.utils import save_json
 from src.metrics.metrics import compute_prefix_tree_result
-from src.llm.models.contraclm_loss import ContraCLMSeqLoss
+from src.llm.models.multiview_projector import Projector
+from src.llm.models.similarity_tlwd import multiview_score_tlwd
+from src.llm.models.sup_con_loss import SupConLoss
 
 
-class MWPsModule(LightningModule):
-    def __init__(self, model, tokenizer, loss_func_seq, train_dataset, dev_dataset, save_path, lr=2e-5, accumulate_grad_batches=2):
+class MathSolver(LightningModule):
+    def __init__(self, args, model, tokenizer, train_dataset, dev_dataset):
         super().__init__()
+        self.args = args
         self.model = model
         self.tokenizer = tokenizer
-        self.loss_func_seq = loss_func_seq
         self.hidden_dim = self.model.config.hidden_size
+        self.projector = Projector(hidden_dim=self.hidden_dim, subspace_dim=128, len_subspace=3)
+        self.criterion = SupConLoss()
         self.train_dataset = train_dataset
         self.dev_dataset = dev_dataset
-        self.save_path = save_path
-        self.lr = lr
-        self.accumulate_grad_batches = accumulate_grad_batches
+        self.save_path = args.save_path
+        self.lr = args.lr
+        self.accumulate_grad_batches = args.accumulate_grad_batches
         self.val_correction = []
         self.equ_correction = []
         self.test_results = []
@@ -32,6 +36,15 @@ class MWPsModule(LightningModule):
         outputs = self.model(input_ids=input_ids, labels=labels, output_hidden_states=True)
         return outputs.loss, outputs.logits, outputs.hidden_states
 
+    def loss_cl(self, last_hidden_states, token_masks, prefixs):
+        token_masks = token_masks.unsqueeze(-1)  # (N, L, 1)
+        features = torch.sum(last_hidden_states * token_masks, dim=1) / torch.sum(token_masks, dim=1)  # [N, H]
+        features = self.projector(features)  # (N,3,128)
+        scores = torch.from_numpy(multiview_score_tlwd(prefixs)).to(features.device)   # (N,N,3)
+        loss_cl = sum(self.criterion(features[:, i, :].unsqueeze(1), mask=scores[:, i, :]) for i in range(3))
+
+        return loss_cl
+
     def training_step(self, batch, batch_idx):
         optimizer = self.optimizers()
         scheduler = self.lr_schedulers()
@@ -39,24 +52,14 @@ class MWPsModule(LightningModule):
         input_ids = batch["input_ids"]
         labels = batch["labels"]
         token_masks = batch["token_mask"]  # (N, L)
-        # prefixs = batch['prefix']
+        prefixs = batch['prefix']
         # Solver Loss
         loss_solver, _, hidden_states = self.forward(input_ids, labels)
         self.log("solver_loss", loss_solver, prog_bar=True, on_step=True, on_epoch=False, logger=True)
 
         last_hidden_states = hidden_states[-1]  # Tensor:(N=16,L=256,H=576)
-
-        _, _, hidden_states_2 = self.forward(input_ids, labels)
-        last_hidden_states_2 = hidden_states_2[-1]  # Tensor:(N=16,L=256,H=576)
-
-        all_attention_mask = input_ids
-        all_hidden_feature_1 = last_hidden_states
-        all_hidden_feature_2 = last_hidden_states_2
-
-        loss_cl = self.loss_func_seq(all_hidden_feature_1, all_hidden_feature_2,
-                                  all_attention_mask)
-
-        self.log("cl_loss", loss_cl, prog_bar=True, on_step=True, on_epoch=False, logger=True)
+        loss_cl = self.loss_cl(last_hidden_states, token_masks, prefixs)
+        self.log("loss_cl", loss_cl, prog_bar=True, on_step=True, on_epoch=False, logger=True)
 
         alpha = 0.05
         loss = loss_solver + alpha * loss_cl
@@ -85,7 +88,7 @@ class MWPsModule(LightningModule):
         answer = batch["answer"]
         nums = [num[0] for num in batch["nums"]]
 
-        val_ac, equ_ac, _, _ = compute_prefix_tree_result(pred_prefix, prefix, answer, nums)
+        val_ac, equ_ac = compute_prefix_tree_result(pred_prefix, prefix, answer, nums)
 
         self.val_correction.append(1 if val_ac else 0)
         self.equ_correction.append(1 if equ_ac else 0)
@@ -97,7 +100,6 @@ class MWPsModule(LightningModule):
         self.log("equ_acc", total_equ_acc, prog_bar=True, on_step=False, on_epoch=True)
         self.val_correction.clear()
         self.equ_correction.clear()
-
 
     def test_step(self, batch, batch_idx):
         input_ids = batch["input_ids"]
@@ -112,7 +114,7 @@ class MWPsModule(LightningModule):
         answer = batch["answer"]
         nums = [num[0] for num in batch["nums"]]
 
-        val_correction, equ_correction, _, _ = compute_prefix_tree_result(pred_prefix, prefix, answer, nums)
+        val_correction, equ_correction = compute_prefix_tree_result(pred_prefix, prefix, answer, nums)
         result = {
             "prefix": prefix,
             "prediction": pred_prefix,
@@ -158,7 +160,7 @@ class MWPsModule(LightningModule):
 
         checkpoint_callback = ModelCheckpoint(
             monitor="val_acc",
-            dirpath=os.path.join(args.save_path, 'checkpoints'),
+            dirpath=os.path.join(self.args.save_path, 'checkpoints'),
             filename="model-{epoch:02d}-{val_acc:.2f}",
             save_top_k=1,
             mode="max",
@@ -178,6 +180,11 @@ class MWPsModule(LightningModule):
             accelerator="gpu",
             # strategy="ddp",
             # strategy = None,
+            default_root_dir=self.args.save_path,
+            devices=self.args.devices,
+            # accumulate_grad_batches=accumulate_grad_batches,
+            max_epochs=self.args.max_epochs,
+            precision=self.args.precision,
         )
 
         ret.update(kwargs)
@@ -188,20 +195,19 @@ def main(args):
     dm = MathWordProblemDataModule(
         train_file=args.train_file,
         dev_file=args.dev_file,
-        tokenizer_checkpoint=args.checkpoint,
+        tokenizer_checkpoint=args.pretrained_model,
         batch_size=args.micro_batch_size,
         max_length=args.max_length
     )
     dm.setup()
     accumulate_grad_batches = args.batch_size // (args.micro_batch_size * len(args.devices))
 
-    model = AutoModelForCausalLM.from_pretrained(args.checkpoint)
+    model = AutoModelForCausalLM.from_pretrained(args.pretrained_model)
     model.resize_token_embeddings(len(dm.tokenizer))
-    loss_func_seq = ContraCLMSeqLoss(pad_token_id=dm.tokenizer.pad_token_id)
-    lightning_model = MWPsModule(
+
+    lightning_model = MathSolver(
         model=model,
         tokenizer=dm.tokenizer,
-        loss_func_seq = loss_func_seq,
         train_dataset=dm.train_dataset,
         dev_dataset=dm.dev_dataset,
         save_path=args.save_path,
@@ -229,7 +235,7 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--train_file', type=str, default='../../data/math23k/train.jsonl', help='Path to the training data file')
+    parser.add_argument('--train_file', type=str, default='../../data/math23k/train_simpler.jsonl', help='Path to the training data file')
     parser.add_argument('--dev_file', type=str, default='../../data/math23k/test.jsonl', help='Path to the development data file')
     parser.add_argument('--batch_size', type=int, default=16, help='Batch size for training')
     parser.add_argument('--micro_batch_size', type=int, default=16, help='Micro Batch size for training')
@@ -241,7 +247,7 @@ if __name__ == '__main__':
     parser.add_argument('--save_path', type=str, default='experiments/math23k_gal1.3B_cl_Bs12', help='Directory to save')
     parser.add_argument('--test', action='store_true', default=False)
     # ['facebook/galactica-1.3b', 'facebook/galactica-125m', 'HuggingFaceTB/SmolLM-1.7B', 'HuggingFaceTB/SmolLM-135M']
-    parser.add_argument('--checkpoint', type=str, default='facebook/galactica-125m', help='Model checkpoint to use')
+    parser.add_argument('--pretrained_model', type=str, default='facebook/galactica-125m', help='Model checkpoint to use')
     args = parser.parse_args()
 
     main(args)

@@ -56,24 +56,33 @@ class MathSolver(pl.LightningModule):
         self.test_results = []
         # self.automatic_optimization = False
 
-    def forward(self, text_ids, text_pads, num_ids, num_pads, equ_ids, equ_pads):
-        """
-        Forward pass for training.
+    # def forward(self, text_ids, text_pads, num_ids, num_pads, equ_ids, equ_pads):
+    #     """
+    #     Forward pass for training.
+    #
+    #     Args:
+    #         text_ids (torch.Tensor): Input token IDs.
+    #         text_pads (torch.Tensor): Input attention mask.
+    #         num_ids (torch.Tensor): Number positions.
+    #         num_pads (torch.Tensor): Number mask.
+    #         equ_ids (torch.Tensor): Target equation token IDs.
+    #         equ_pads (torch.Tensor): Target equation mask.
+    #
+    #     Returns:
+    #         torch.Tensor: Computed loss for the batch.
+    #     """
+    #     loss, _ = self.solver.train_step(text_ids, text_pads, num_ids, num_pads, equ_ids, equ_pads, self.op_tokens,
+    #                                      self.constant_tokens)
+    #     return loss
+    def forward(self, text_ids, text_pads, num_ids, num_pads):
+        with torch.no_grad():
+            tree_res = self.solver.evaluate_step(
+                text_ids, text_pads, num_ids, num_pads,
+                self.op_tokens, self.constant_tokens, max_length=45, beam_size=3
+            )
+            tree_out = [self.id_dict[x] for x in tree_res.out]
 
-        Args:
-            text_ids (torch.Tensor): Input token IDs.
-            text_pads (torch.Tensor): Input attention mask.
-            num_ids (torch.Tensor): Number positions.
-            num_pads (torch.Tensor): Number mask.
-            equ_ids (torch.Tensor): Target equation token IDs.
-            equ_pads (torch.Tensor): Target equation mask.
-
-        Returns:
-            torch.Tensor: Computed loss for the batch.
-        """
-        loss, _ = self.solver.train_step(text_ids, text_pads, num_ids, num_pads, equ_ids, equ_pads, self.op_tokens,
-                                         self.constant_tokens)
-        return loss
+        return tree_out
 
     def training_step(self, batch, batch_idx):
         """
@@ -187,7 +196,7 @@ class MathSolver(pl.LightningModule):
         self.log("val_acc", value_accuracy, prog_bar=True, logger=True)
         self.log("equ_acc", equation_accuracy, prog_bar=True, logger=True)
 
-        save_json(self.test_results, os.path.join(self.hparams.pretrained_model, f"test/{self.hparams.ckpt}/test_results.jsonl"))
+        save_json(self.test_results, os.path.join(f"{self.hparams.save_path}/test_results.jsonl"))
 
     def configure_optimizers(self):
         """
@@ -210,8 +219,8 @@ class MathSolver(pl.LightningModule):
         """
         Default kwargs used when initializing pl.Trainer
         """
-        tb_logger = pl_loggers.TensorBoardLogger(save_dir=self.hparams.save_dir)
-        csv_logger = pl_loggers.CSVLogger(save_dir=self.hparams.save_dir, version=tb_logger.version)
+        tb_logger = pl_loggers.TensorBoardLogger(save_dir=self.hparams.save_path)
+        csv_logger = pl_loggers.CSVLogger(save_dir=self.hparams.save_path, version=tb_logger.version)
         loggers = [tb_logger, csv_logger]
         log_every_n_steps = max(1, int(self.hparams.log_step_ratio * self.total_steps))
 
@@ -230,7 +239,7 @@ class MathSolver(pl.LightningModule):
             callbacks=callbacks,
             logger=loggers,
             log_every_n_steps=log_every_n_steps,
-            default_root_dir=self.hparams.save_dir,
+            default_root_dir=self.hparams.save_path,
             accelerator="gpu",
             devices=self.hparams.devices,
             max_epochs=self.hparams.epoch,
