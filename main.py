@@ -244,7 +244,6 @@ def get_parser():
     parser.add_argument('--micro_batch_size', type=int, default=16)
     parser.add_argument('--seed', type=int, default=1)
     parser.add_argument('--lr', type=float, default=5e-5)
-    parser.add_argument('--learning_rate', type=float, default=5e-5)
     parser.add_argument('--weight_decay', type=float, default=0.01)
     parser.add_argument('--warmup_ratio', type=float, default=0.1)
     parser.add_argument('--alpha', type=float, default=1.0)

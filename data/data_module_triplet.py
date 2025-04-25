@@ -32,7 +32,7 @@ class MathDataset(Dataset):
         self.op_tokens = op_tokens
         self.token_dict = token_dict
         self.number_tokens_ids = number_tokens_ids
-        self.sample_dict = {sample["id"]: sample for sample in self.data}
+        self.sample_dict = {str(sample["id"]): sample for sample in self.data}
 
     def _process_sample(self, sample):
         """ Tokenize and preprocess a single data sample """
@@ -47,7 +47,6 @@ class MathDataset(Dataset):
         if self.mode in ['train']:
             positive_sample = self.sample_dict.get(str(sample["positive"]), None)
             negative_sample = self.sample_dict.get(str(sample["negative"]), None)
-
             pos_text_ids = torch.tensor(
                 self.tokenizer.encode("<O> " + positive_sample["text"], max_length=self.max_text_len, truncation=True),
                 dtype=torch.long)
