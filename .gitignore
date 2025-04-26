@@ -6,4 +6,5 @@ debug
 experiments
 pretrained_model
 checkpoints
+scripts
 data_prep.py

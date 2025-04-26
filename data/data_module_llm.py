@@ -1,11 +1,15 @@
-import torch
+"""Data Module for Math Word Problems (MWPs)."""
+
 import json
+import torch
 from pytorch_lightning import LightningDataModule
 from torch.utils.data import DataLoader, Dataset
 from transformers import AutoTokenizer
 
 
 class MWPTrainDataset(Dataset):
+    """Dataset for training MWPs with input text and prefix."""
+
     def __init__(self, data, tokenizer, max_length=256):
         self.data = data
         self.tokenizer = tokenizer
@@ -15,6 +19,7 @@ class MWPTrainDataset(Dataset):
         return len(self.data)
 
     def __getitem__(self, idx):
+        """Process one sample into input and label tensors."""
         item = self.data[idx]
         text = item["text"]
         prefix = " ".join(item["prefix"])
@@ -36,6 +41,7 @@ class MWPTrainDataset(Dataset):
         }
 
 def custom_collate_fn(batch):
+    """Custom collate function to batch train samples."""
     input_ids = torch.stack([item["input_ids"] for item in batch])
     labels = torch.stack([item["labels"] for item in batch])
     token_masks = torch.stack([item["token_mask"] for item in batch])
@@ -55,6 +61,7 @@ def custom_collate_fn(batch):
 
 
 class MWPTestDataset(Dataset):
+    """Dataset for evaluation and testing MWPs."""
     def __init__(self, data, tokenizer, max_length=256):
         self.data = data
         self.tokenizer = tokenizer
@@ -64,11 +71,14 @@ class MWPTestDataset(Dataset):
         return len(self.data)
 
     def __getitem__(self, idx):
+        """Process one sample into input and label tensors for test."""
         item = self.data[idx]
         text = item["text"]
         prefix = " ".join(item["prefix"])
-        input_text = f"Question: {text} Prefix: "  # e.g."Question: I have N_0 apples and N_1 bananas. How many fruit I have in total? Prefix:"
-        target_text = f"Question: {text} Prefix: {prefix}"  # e.g."Question: I have N_0 apples and N_1 bananas. How many fruit I have in total? Prefix: + N_0 N_1"
+        # e.g."Question: I have N_0 apples and N_1 bananas. How many fruit I have in total? Prefix:"
+        input_text = f"Question: {text} Prefix: "
+        # e.g."Question: I have N_0 apples and N_1 bananas. How many fruit I have in total? Prefix: + N_0 N_1"
+        target_text = f"Question: {text} Prefix: {prefix}"
         input_ids = self.tokenizer(input_text, truncation=True, padding="max_length", max_length=self.max_length)[
             "input_ids"]
         label_ids = self.tokenizer(target_text, truncation=True, padding="max_length", max_length=self.max_length)[
@@ -84,6 +94,7 @@ class MWPTestDataset(Dataset):
 
 
 class MathWordProblemDataModule(LightningDataModule):
+    """Lightning DataModule for Math Word Problems."""
     def __init__(self, train_file, dev_file, tokenizer_checkpoint, batch_size=16, max_length=256):
         super().__init__()
         self.train_file = train_file
@@ -91,8 +102,11 @@ class MathWordProblemDataModule(LightningDataModule):
         self.tokenizer_checkpoint = tokenizer_checkpoint
         self.batch_size = batch_size
         self.max_length = max_length
+        self.train_dataset = None
+        self.dev_dataset = None
 
     def setup(self, stage=None):
+        """Set up datasets and tokenizer."""
         self.tokenizer = AutoTokenizer.from_pretrained(self.tokenizer_checkpoint)
         if self.tokenizer.pad_token is None:
             self.tokenizer.add_special_tokens({'pad_token': '[PAD]'})
@@ -104,6 +118,7 @@ class MathWordProblemDataModule(LightningDataModule):
         self.dev_dataset = MWPTestDataset(dev_data, self.tokenizer, max_length=self.max_length)
 
     def load_json(self, filename):
+        """Load dataset from a JSONL file."""
         data = []
         with open(filename, encoding='utf-8') as f:
             for line in f:

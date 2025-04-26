@@ -1,10 +1,13 @@
+"""Data Module for Math Word Problems (MWPs)."""
+
 import json
+from collections import Counter
+
 import torch
 import pytorch_lightning as pl
 from torch.utils.data import Dataset, DataLoader
-from collections import Counter
-from transformers import BertTokenizer, AutoConfig
 from torch.nn.utils.rnn import pad_sequence
+from transformers import BertTokenizer
 
 
 def load_data(filename):
@@ -68,7 +71,7 @@ class MathDataset(Dataset):
                 "neg_text_ids": neg_text_ids,
                 "neg_num_ids": neg_num_ids,
             }
-        elif self.mode in ['test', 'val']:
+        if self.mode in ['test', 'val']:
             return {
                 "text_ids": text_ids,
                 "text_pads": torch.ones_like(text_ids, dtype=torch.float),
@@ -80,6 +83,7 @@ class MathDataset(Dataset):
                 "nums": sample["nums"],
                 "answer": sample["answer"],
             }
+        return None
 
     def __len__(self):
         return len(self.data)
@@ -115,20 +119,26 @@ class MathDataModule(pl.LightningDataModule):
         self.train_dataset = None
         self.val_dataset = None
         self.test_dataset = None
-        self.op_tokens, self.constant_tokens, self.number_tokens, self.token_dict, self.id_dict = None, None, None, None, None
+        self.op_tokens, self.constant_tokens, self.number_tokens, self.token_dict, self.id_dict = (
+            None, None, None, None, None)
         self.number_tokens_ids = None
 
     def setup(self, stage=None):
         """ Load tokenizer and initialize datasets """
         self.tokenizer = BertTokenizer.from_pretrained(self.tokenizer_path)
-        self.total_data = load_data(f"{self.data_dir}/{self.train_file}") + load_data(f"{self.data_dir}/{self.test_file}")
-        self.op_tokens, self.constant_tokens, self.number_tokens, self.token_dict, self.id_dict = self._build_token_dict()
+        self.total_data = (load_data(f"{self.data_dir}/{self.train_file}") +
+                           load_data(f"{self.data_dir}/{self.test_file}"))
+        self.op_tokens, self.constant_tokens, self.number_tokens, self.token_dict, self.id_dict = (
+            self._build_token_dict())
         self.tokenizer.add_special_tokens({'additional_special_tokens': self.number_tokens + ['<O>', '<Add>', '<Mul>']})
         self.number_tokens_ids = set([self.tokenizer.convert_tokens_to_ids(x) for x in self.number_tokens])
 
-        self.train_dataset = MathDataset("train", f"{self.data_dir}/{self.train_file}", self.tokenizer, self.op_tokens, self.token_dict, self.number_tokens_ids, self.max_text_len)
-        self.val_dataset = MathDataset("val", f"{self.data_dir}/{self.test_file}", self.tokenizer, self.op_tokens, self.token_dict, self.number_tokens_ids, self.max_text_len)
-        self.test_dataset = MathDataset("test", f"{self.data_dir}/{self.test_file}", self.tokenizer, self.op_tokens, self.token_dict, self.number_tokens_ids, self.max_text_len)
+        self.train_dataset = MathDataset("train", f"{self.data_dir}/{self.train_file}", self.tokenizer,
+                                         self.op_tokens, self.token_dict, self.number_tokens_ids, self.max_text_len)
+        self.val_dataset = MathDataset("val", f"{self.data_dir}/{self.test_file}", self.tokenizer,
+                                       self.op_tokens, self.token_dict, self.number_tokens_ids, self.max_text_len)
+        self.test_dataset = MathDataset("test", f"{self.data_dir}/{self.test_file}", self.tokenizer,
+                                        self.op_tokens, self.token_dict, self.number_tokens_ids, self.max_text_len)
 
     def _build_token_dict(self):
         """ Construct token dictionary from dataset """
@@ -141,7 +151,8 @@ class MathDataModule(pl.LightningDataModule):
 
         tokens = list(tokens)
         op_tokens = sorted([x for x in tokens if x[0].lower() not in {"c", "n"}])
-        constant_tokens = sorted([x for x in tokens if x[0].lower() == "c"], key=lambda x: float(x[2:].replace("_", ".")))
+        constant_tokens = sorted([x for x in tokens if x[0].lower() == "c"],
+                                 key=lambda x: float(x[2:].replace("_", ".")))
         number_tokens = sorted([f"N_{i}" for i in range(max_nums_len)], key=lambda x: int(x[2:]))
 
         # Mapping token to ID
