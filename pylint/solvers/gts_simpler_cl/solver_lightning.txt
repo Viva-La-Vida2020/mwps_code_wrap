@@ -1,0 +1,7 @@
+************* Module solver_lightning
+src\solvers\gts_simpler_cl\solver_lightning.py:16:0: R0902: Too many instance attributes (10/7) (too-many-instance-attributes)
+src\solvers\gts_simpler_cl\solver_lightning.py:21:4: R0913: Too many arguments (10/5) (too-many-arguments)
+src\solvers\gts_simpler_cl\solver_lightning.py:21:4: R0917: Too many positional arguments (10/5) (too-many-positional-arguments)
+
+------------------------------------------------------------------
+Your code has been rated at 9.64/10 (previous run: 9.62/10, +0.01)

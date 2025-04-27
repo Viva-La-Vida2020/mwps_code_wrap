@@ -1,0 +1,10 @@
+************* Module utils
+src\utils\utils.py:24:8: R1732: Consider using 'with' for resource-allocating operations (consider-using-with)
+
+-----------------------------------
+Your code has been rated at 9.23/10
+
+(venv) PS C:\Users\Leo\PycharmProjects\mwps_code_wrap> pylint src/utils/utils.py
+
+-------------------------------------------------------------------
+Your code has been rated at 10.00/10 (previous run: 9.23/10, +0.77)

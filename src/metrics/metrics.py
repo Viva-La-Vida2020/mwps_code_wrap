@@ -1,3 +1,8 @@
+"""
+performance evaluation using expression, prefix and numerical value
+"""
+
+
 def convert_expression(test, nums):
     """
     Converts symbolic math expressions into numeric values where applicable.
@@ -21,10 +26,12 @@ def convert_expression(test, nums):
 
 
 def compute_prefix_expression(pre_fix):
-    st = list()
+    """
+    Compute prefix results.
+    """
+    st = []
     operators = ["+", "-", "^", "*", "/"]
-    # pre_fix = copy.deepcopy(pre_fix)
-    # pre_fix.reverse()
+
     for p in pre_fix.reverse():
         if p not in operators:
             st.append(eval(p))
@@ -90,11 +97,3 @@ def compute_tree_result(test, target, answer, nums, notation="prefix"):
 # Wrappers for specific notation types
 def compute_prefix_tree_result(test, target, answer, nums):
     return compute_tree_result(test, target, answer, nums, notation="prefix")
-
-
-# def compute_infix_tree_result(test, target, answer, nums):
-#     return compute_tree_result(test, target, answer, nums, notation="infix")
-#
-#
-# def compute_postfix_tree_result(test, target, answer, nums):
-#     return compute_tree_result(test, target, answer, nums, notation="postfix")

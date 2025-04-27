@@ -1,0 +1,5 @@
+************* Module contraclm_loss
+src\losses\contraclm_loss.py:29:8: R1725: Consider using Python 3 style super() without arguments (super-with-arguments)
+
+------------------------------------------------------------------
+Your code has been rated at 9.63/10 (previous run: 8.89/10, +0.74)

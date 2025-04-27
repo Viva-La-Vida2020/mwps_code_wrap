@@ -1,0 +1,9 @@
+************* Module solver_llm_contraclm_lightning
+src\solvers\llm\solver_llm_contraclm_lightning.py:16:0: R0902: Too many instance attributes (14/7) (too-many-instance-attributes)
+src\solvers\llm\solver_llm_contraclm_lightning.py:21:4: R0913: Too many arguments (7/5) (too-many-arguments)
+src\solvers\llm\solver_llm_contraclm_lightning.py:21:4: R0917: Too many positional arguments (7/5) (too-many-positional-arguments)
+src\solvers\llm\solver_llm_contraclm_lightning.py:42:4: R0914: Too many local variables (19/15) (too-many-locals)
+src\solvers\llm\solver_llm_contraclm_lightning.py:131:8: W0632: Possible unbalanced tuple unpacking with sequence defined at line 85 of src.metrics.metrics: left side has 4 labels, right side has 2 values (unbalanced-tuple-unpacking)
+
+-----------------------------------
+Your code has been rated at 9.57/10

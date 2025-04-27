@@ -5,7 +5,7 @@ Supports:
 - Encoder-Decoder models (GTS, Simpler, TextualCL)
 - Decoder-only models (LLM, LLM-Simpler, LLM-ContraCLM)
 
-Author: Li Yiyao
+Author: Li Yiyao, Wang Lu
 Date: 2024-05-01
 """
 
@@ -23,27 +23,25 @@ import data.data_module_llm as DataModuleLLM
 import data.data_module_triplet as DataModuleTriplet
 
 # === Model Components ===
-import src.gts.models as ModelGTS
-import src.gts_simpler_cl.models as ModelSimpler
-import src.gts_triplet_cl.models as ModelTextual
-import src.llm.models as ModelLLM
+from src.models.encoder import Encoder
+from src.models.tree_decoder import TreeDecoder
+from src.models.projector import Projector
+
+# === Metrics & Losses ===
 from src.metrics.metrics_inference import compute_tree_result
+from src.losses import contraclm_loss
 
 # === Solvers ===
-from src.gts.solvers.solver_lightning import MathSolver as SolverGTS
-from src.gts_simpler_cl.solvers.solver_lightning import MathSolver as SolverSimpler
-from src.gts_triplet_cl.solvers.solver_lightning import MathSolver as SolverTextual
-from src.llm.solvers.solver_llm_lightning import MathSolver as SolverLLMSimpler
-from src.llm.solvers.solver_llm_simpler_lightning import MathSolver as SolverLLM
-from src.llm.solvers.solver_llm_contraclm_lightning import MathSolver as SolverLLMContraCLM
+from src.solvers.gts.solver_lightning import MathSolver as SolverGTS
+from src.solvers.gts_simpler_cl.solver_lightning import MathSolver as SolverSimpler
+from src.solvers.gts_triplet_cl.solver_lightning import MathSolver as SolverTextual
+from src.solvers.llm.solver_llm_lightning import MathSolver as SolverLLMSimpler
+from src.solvers.llm.solver_llm_simpler_lightning import MathSolver as SolverLLM
+from src.solvers.llm.solver_llm_contraclm_lightning import MathSolver as SolverLLMContraCLM
 
 # === Constants ===
 EMBEDDING_BERT = 768
 EMBEDDING_SIZE = 128
-
-import os
-os.environ["http_proxy"] = "http://127.0.0.1:7897"
-os.environ["https_proxy"] = "http://127.0.0.1:7897"
 
 
 def build_data_module(local_args):
@@ -100,12 +98,12 @@ def build_model(local_args, data_module):
         pretrained_model.resize_token_embeddings(len(tokenizer))
         total_steps = len(data_module.train_dataloader()) * local_args.epoch
 
-        # pylint: disable=no-value-for-parameter
+        encoder = Encoder(pretrained_model)
+        decoder = TreeDecoder(
+            config, len(data_module.op_tokens), len(data_module.constant_tokens), EMBEDDING_SIZE
+        )
+
         if local_args.model == 'gts':
-            encoder = ModelGTS.encoder.Encoder(pretrained_model)
-            decoder = ModelGTS.tree_decoder.TreeDecoder(
-                config, len(data_module.op_tokens), len(data_module.constant_tokens), EMBEDDING_SIZE
-            )
             if local_args.mode == 'demo':
                 return SolverGTS.load_from_checkpoint(
                     checkpoint_path=local_args.ckpt,
@@ -122,15 +120,8 @@ def build_model(local_args, data_module):
                 local_args, encoder, decoder, tokenizer,
                 data_module.op_tokens, data_module.constant_tokens, data_module.id_dict, total_steps
             )
-
         if local_args.model == 'simpler':
-            encoder = ModelSimpler.encoder.Encoder(pretrained_model)
-            decoder = ModelSimpler.tree_decoder.TreeDecoder(
-                config, len(data_module.op_tokens), len(data_module.constant_tokens), EMBEDDING_SIZE
-            )
-            projector = ModelSimpler.multiview_projector.Projector(EMBEDDING_BERT,
-                                                                   EMBEDDING_SIZE,
-                                                                   len_subspace=3)
+            projector = Projector(EMBEDDING_BERT, EMBEDDING_SIZE, len_subspace=3)
             if local_args.mode == 'demo':
                 return SolverSimpler.load_from_checkpoint(
                     checkpoint_path=local_args.ckpt,
@@ -148,12 +139,7 @@ def build_model(local_args, data_module):
                 local_args, encoder, decoder, projector, tokenizer,
                 data_module.op_tokens, data_module.constant_tokens, data_module.id_dict, total_steps
             )
-
         if local_args.model == 'textual':
-            encoder = ModelTextual.encoder.Encoder(pretrained_model)
-            decoder = ModelTextual.tree_decoder.TreeDecoder(
-                config, len(data_module.op_tokens), len(data_module.constant_tokens), EMBEDDING_SIZE
-            )
             if local_args.mode == 'demo':
                 return SolverTextual.load_from_checkpoint(
                     checkpoint_path=local_args.ckpt,
@@ -170,7 +156,6 @@ def build_model(local_args, data_module):
                 local_args, encoder, decoder, tokenizer,
                 data_module.op_tokens, data_module.constant_tokens, data_module.id_dict, total_steps
             )
-
     if local_args.model in ['llm', 'llm_simpler', 'llm_contraclm']:
         pretrained_model = AutoModelForCausalLM.from_pretrained(local_args.pretrained_model)
         pretrained_model.resize_token_embeddings(len(tokenizer))
@@ -191,7 +176,6 @@ def build_model(local_args, data_module):
                 local_args, pretrained_model, tokenizer,
                 data_module.train_dataset, data_module.dev_dataset
             )
-
         if local_args.model == 'llm_simpler':
             if local_args.mode == 'demo':
                 return SolverLLMSimpler.load_from_checkpoint(
@@ -207,7 +191,7 @@ def build_model(local_args, data_module):
                 data_module.train_dataset, data_module.dev_dataset
             )
         if local_args.model == 'llm_contraclm':
-            loss_func_seq = ModelLLM.contraclm_loss.ContraCLMSeqLoss(
+            loss_func_seq = contraclm_loss.ContraCLMSeqLoss(
                 pad_token_id=tokenizer.pad_token_id)
             if local_args.mode == 'demo':
                 return SolverLLMContraCLM.load_from_checkpoint(
@@ -365,6 +349,7 @@ def main(local_args):
         run_demo_loop(local_args, model, data_module)
     else:
         trainer_kwargs = model.set_trainer_kwargs()
+        # Set limit_train_batches=0.01 for debug/test
         trainer = pl.Trainer(**trainer_kwargs)
         if local_args.mode == "test":
             trainer.test(model=model, datamodule=data_module, ckpt_path=local_args.ckpt)

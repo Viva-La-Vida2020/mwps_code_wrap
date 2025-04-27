@@ -1,0 +1,7 @@
+************* Module metrics
+src\metrics\metrics.py:37:22: W0123: Use of eval (eval-used)
+src\metrics\metrics.py:67:52: W0613: Unused argument 'notation' (unused-argument)
+src\metrics\metrics.py:98:0: C0116: Missing function or method docstring (missing-function-docstring)
+
+------------------------------------------------------------------
+Your code has been rated at 9.41/10 (previous run: 9.22/10, +0.20)

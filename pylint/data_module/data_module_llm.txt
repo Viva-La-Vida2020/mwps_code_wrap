@@ -1,0 +1,8 @@
+************* Module data_module_llm
+data\data_module_llm.py:96:0: R0902: Too many instance attributes (8/7) (too-many-instance-attributes)
+data\data_module_llm.py:98:4: R0913: Too many arguments (6/5) (too-many-arguments)
+data\data_module_llm.py:98:4: R0917: Too many positional arguments (6/5) (too-many-positional-arguments)
+data\data_module_llm.py:110:8: W0201: Attribute 'tokenizer' defined outside __init__ (attribute-defined-outside-init)
+
+------------------------------------------------------------------
+Your code has been rated at 9.47/10 (previous run: 9.47/10, +0.00)

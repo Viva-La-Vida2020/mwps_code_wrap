@@ -1,0 +1,6 @@
+************* Module sup_con_loss
+src\losses\sup_con_loss.py:17:8: R1725: Consider using Python 3 style super() without arguments (super-with-arguments)
+src\losses\sup_con_loss.py:22:4: R0914: Too many local variables (18/15) (too-many-locals)
+
+------------------------------------------------------------------
+Your code has been rated at 9.57/10 (previous run: 9.35/10, +0.22)

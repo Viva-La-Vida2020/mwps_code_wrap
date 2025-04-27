@@ -1,0 +1,12 @@
+************* Module data_module_triplet
+data\data_module_triplet.py:19:0: R0902: Too many instance attributes (8/7) (too-many-instance-attributes)
+data\data_module_triplet.py:24:4: R0913: Too many arguments (8/5) (too-many-arguments)
+data\data_module_triplet.py:24:4: R0917: Too many positional arguments (8/5) (too-many-positional-arguments)
+data\data_module_triplet.py:95:0: R0902: Too many instance attributes (17/7) (too-many-instance-attributes)
+data\data_module_triplet.py:100:4: R0913: Too many arguments (7/5) (too-many-arguments)
+data\data_module_triplet.py:100:4: R0917: Too many positional arguments (7/5) (too-many-positional-arguments)
+data\data_module_triplet.py:134:33: R1718: Consider using a set comprehension (consider-using-set-comprehension)
+data\data_module_triplet.py:165:4: R0914: Too many local variables (16/15) (too-many-locals)
+
+------------------------------------------------------------------
+Your code has been rated at 9.22/10 (previous run: 9.22/10, +0.00)

@@ -1,0 +1,7 @@
+************* Module solver_llm_lightning
+src\solvers\llm\solver_llm_lightning.py:16:0: R0902: Too many instance attributes (13/7) (too-many-instance-attributes)
+src\solvers\llm\solver_llm_lightning.py:21:4: R0913: Too many arguments (6/5) (too-many-arguments)
+src\solvers\llm\solver_llm_lightning.py:21:4: R0917: Too many positional arguments (6/5) (too-many-positional-arguments)
+
+-----------------------------------
+Your code has been rated at 9.71/10

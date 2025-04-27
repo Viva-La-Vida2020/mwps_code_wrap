@@ -2,6 +2,8 @@
 init-hook='import sys; sys.path.append(".")'
 [MESSAGES CONTROL]
 disable=
-    no-member
+    no-member,
+    no-value-for-parameter,
+    arguments-differ,
 [FORMAT]
 max-line-length=120

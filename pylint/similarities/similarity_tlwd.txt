@@ -1,0 +1,6 @@
+************* Module similarity_tlwd
+src\similarities\similarity_tlwd.py:176:0: C0304: Final newline missing (missing-final-newline)
+src\similarities\similarity_tlwd.py:59:0: R0903: Too few public methods (1/2) (too-few-public-methods)
+
+------------------------------------------------------------------
+Your code has been rated at 9.78/10 (previous run: 9.78/10, +0.00)

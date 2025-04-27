@@ -1,0 +1,5 @@
+************* Module projector
+src\models\projector.py:25:8: R1725: Consider using Python 3 style super() without arguments (super-with-arguments)
+
+------------------------------------------------------------------
+Your code has been rated at 9.29/10 (previous run: 8.57/10, +0.71)

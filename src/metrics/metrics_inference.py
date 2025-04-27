@@ -1,3 +1,8 @@
+"""
+performance evaluation using expression, prefix and numerical value in the inference time
+"""
+
+
 def from_prefix_to_infix(prefix):
     """
     Convert a prefix expression to an infix expression without adding parentheses around numbers.
@@ -34,7 +39,6 @@ def from_prefix_to_infix(prefix):
         stack.append(expr)
 
     return stack[0] if len(stack) == 1 else None  # Ensure only one valid expression remains
-
 
 
 def convert_expression(test, nums):
@@ -112,6 +116,10 @@ def compute_expression(expression, notation="prefix"):
 
 
 def compute_tree_result(tree_out, nums, notation="prefix"):
+    """
+    compute the final numerical result from the output accordinf to prefix
+    """
+
     pred_prefix = convert_expression(tree_out, nums)
     pred_infix = from_prefix_to_infix(pred_prefix)
     try:
