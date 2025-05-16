@@ -71,7 +71,7 @@ class MathSolver(LightningModule):
 
         predictions = torch.argmax(logits, dim=-1)
         pred = self.tokenizer.decode(predictions[0], skip_special_tokens=True)
-        pred_prefix = pred.split("Prefix:")[-1].strip().split()
+        pred_prefix = pred.split("Steps:")[-1].strip().split(" ; ")
 
         prefix = [op[0] for op in batch["prefix"]]  # Convert from [tuple(str, )] to [str, ]
         answer = batch["answer"]

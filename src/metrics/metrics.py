@@ -32,9 +32,9 @@ def compute_prefix_expression(pre_fix):
     st = []
     operators = ["+", "-", "^", "*", "/"]
 
-    for p in pre_fix.reverse():
+    for p in reversed(pre_fix):
         if p not in operators:
-            st.append(eval(p))
+            st.append(eval(str(p)))
         elif p == "+" and len(st) > 1:
             a = st.pop()
             b = st.pop()
