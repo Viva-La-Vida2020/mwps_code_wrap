@@ -1,9 +1,0 @@
-************* Module solver_llm_simpler_lightning
-src\solvers\llm\solver_llm_simpler_lightning.py:19:0: R0902: Too many instance attributes (15/7) (too-many-instance-attributes)
-src\solvers\llm\solver_llm_simpler_lightning.py:24:4: R0913: Too many arguments (6/5) (too-many-arguments)
-src\solvers\llm\solver_llm_simpler_lightning.py:24:4: R0917: Too many positional arguments (6/5) (too-many-positional-arguments)
-src\solvers\llm\solver_llm_simpler_lightning.py:46:4: C0116: Missing function or method docstring (missing-function-docstring)
-src\solvers\llm\solver_llm_simpler_lightning.py:55:4: R0914: Too many local variables (16/15) (too-many-locals)
-
-------------------------------------------------------------------
-Your code has been rated at 9.60/10 (previous run: 9.52/10, +0.08)

@@ -5,8 +5,6 @@ Supports:
 - Encoder-Decoder models (GTS, Simpler, TextualCL)
 - Decoder-only models (LLM, LLM-Simpler, LLM-ContraCLM)
 
-Author: Li Yiyao, Wang Lu
-Date: 2024-05-01
 """
 
 import argparse

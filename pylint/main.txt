@@ -1,9 +1,0 @@
-************* Module main
-main.py:91:0: R0911: Too many return statements (12/6) (too-many-return-statements)
-main.py:91:0: R0912: Too many branches (14/12) (too-many-branches)
-main.py:91:0: R1710: Either all return statements in a function should return an expression, or none of them should. (inconsistent-return-statements)
-main.py:267:0: R0914: Too many local variables (16/15) (too-many-locals)
-main.py:332:15: W0718: Catching too general exception Exception (broad-exception-caught)
-
-------------------------------------------------------------------
-Your code has been rated at 9.69/10 (previous run: 9.57/10, +0.12)

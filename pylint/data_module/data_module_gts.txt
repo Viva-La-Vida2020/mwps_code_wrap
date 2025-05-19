@@ -1,7 +1,0 @@
-************* Module data_module_gts
-data\data_module_gts.py:24:4: R0913: Too many arguments (8/5) (too-many-arguments)
-data\data_module_gts.py:24:4: R0917: Too many positional arguments (8/5) (too-many-positional-arguments)
-data\data_module_gts.py:76:0: R0902: Too many instance attributes (17/7) (too-many-instance-attributes)
-data\data_module_gts.py:81:4: R0913: Too many arguments (7/5) (too-many-arguments)
-data\data_module_gts.py:81:4: R0917: Too many positional arguments (7/5) (too-many-positional-arguments)
-data\data_module_gts.py:116:33: R1718: Consider using a set comprehension (consider-using-set-comprehension)
