@@ -8,3 +8,4 @@ pretrained_model
 checkpoints
 scripts
 data_prep.py
+.DS_Store

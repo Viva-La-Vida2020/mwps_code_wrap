@@ -1,4 +1,4 @@
-# 🧠 Math Word Problems (MWPs) Contrastive Learning Framework
+# 🧠 Multi-view Similarity-weighted Contrastive Representation Learning for Math Word Problems
 
 This repository provides implementations of several contrastive learning (CL) frameworks designed for solving **Math Word Problems (MWPs)**. We support both **encoder-decoder** and **decoder-only** models, including:
 

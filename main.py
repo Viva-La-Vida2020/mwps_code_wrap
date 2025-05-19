@@ -5,8 +5,6 @@ Supports:
 - Encoder-Decoder models (GTS, Simpler, TextualCL)
 - Decoder-only models (LLM, LLM-Simpler, LLM-ContraCLM)
 
-Author: Li Yiyao, Wang Lu
-Date: 2024-05-01
 """
 
 import argparse
@@ -35,8 +33,8 @@ from src.losses import contraclm_loss
 from src.solvers.gts.solver_lightning import MathSolver as SolverGTS
 from src.solvers.gts_simpler_cl.solver_lightning import MathSolver as SolverSimpler
 from src.solvers.gts_triplet_cl.solver_lightning import MathSolver as SolverTextual
-from src.solvers.llm.solver_llm_lightning import MathSolver as SolverLLMSimpler
-from src.solvers.llm.solver_llm_simpler_lightning import MathSolver as SolverLLM
+from src.solvers.llm.solver_llm_lightning import MathSolver as SolverLLM
+from src.solvers.llm.solver_llm_simpler_lightning import MathSolver as SolverLLMSimpler
 from src.solvers.llm.solver_llm_contraclm_lightning import MathSolver as SolverLLMContraCLM
 
 # === Constants ===
